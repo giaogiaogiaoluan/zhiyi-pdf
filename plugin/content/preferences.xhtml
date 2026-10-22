@@ -1,0 +1,152 @@
+<html:style>
+#pdf2rea-pref-root { display:block; color:var(--fill-primary, #202124); font:inherit; min-width:0; }
+#pdf2rea-pref-root * { box-sizing:border-box; }
+#pdf2rea-pref-root .p2r-header { display:flex; align-items:center; gap:12px; padding:8px 0 18px; }
+#pdf2rea-pref-root .p2r-header img { width:40px; height:40px; }
+#pdf2rea-pref-root .p2r-header h2 { margin:0; font-size:1.4em; font-weight:650; }
+#pdf2rea-pref-root .p2r-header p { margin:4px 0 0; }
+#pdf2rea-pref-root .p2r-tabs { display:flex; flex-wrap:wrap; gap:4px; border-bottom:1px solid var(--material-divider, #d4d7dc); padding-bottom:8px; margin:0 0 22px; }
+#pdf2rea-pref-root button { font:inherit; cursor:pointer; white-space:normal; }
+#pdf2rea-pref-root .p2r-tabs button { border:0; background:transparent; color:inherit; padding:7px 10px; border-radius:5px; }
+#pdf2rea-pref-root .p2r-tabs button[aria-selected="true"] { color:var(--accent-blue, #1b6acb); background:var(--accent-blue10, #e9f1fc); font-weight:600; }
+#pdf2rea-pref-root button:focus-visible, #pdf2rea-pref-root summary:focus-visible { outline:2px solid var(--accent-blue, #1b6acb); outline-offset:2px; }
+#pdf2rea-pref-root [hidden] { display:none !important; }
+#pdf2rea-pref-root section { min-width:0; }
+#pdf2rea-pref-root h3 { font-size:1.15em; margin:0 0 6px; }
+#pdf2rea-pref-root h4 { font-size:1em; margin:0 0 10px; }
+#pdf2rea-pref-root .p2r-intro { margin:0 0 20px; color:var(--fill-secondary, #60656c); }
+#pdf2rea-pref-root .p2r-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(min(240px,100%),1fr)); gap:14px 20px; }
+#pdf2rea-pref-root .p2r-field { display:flex; flex-direction:column; gap:6px; min-width:0; margin-bottom:14px; }
+#pdf2rea-pref-root label { font-weight:500; }
+#pdf2rea-pref-root input, #pdf2rea-pref-root select, #pdf2rea-pref-root textarea { min-width:0; width:100%; max-width:100%; margin:0; padding:6px 8px; font:inherit; color:inherit; background:var(--material-background, #fff); border:1px solid var(--material-divider, #bfc5cc); border-radius:5px; }
+#pdf2rea-pref-root textarea { resize:vertical; min-height:72px; }
+#pdf2rea-pref-root hbox { display:flex; align-items:center; flex-wrap:wrap; gap:8px; margin:8px 0; min-width:0; }
+#pdf2rea-pref-root checkbox { margin:5px 0; }
+#pdf2rea-pref-root .p2r-checks { display:flex; flex-direction:column; }
+#pdf2rea-pref-root .p2r-subsection { margin-top:22px; padding-top:18px; border-top:1px solid var(--material-divider, #d4d7dc); }
+#pdf2rea-pref-root .pdf2rea-hint { color:var(--fill-secondary, #60656c); font-size:.93em; line-height:1.6; margin:4px 0 10px; overflow-wrap:anywhere; }
+#pdf2rea-pref-root .p2r-details { margin-top:18px; }
+#pdf2rea-pref-root summary { cursor:pointer; font-weight:550; padding:6px 0; }
+#pdf2rea-pref-root .p2r-details-body { padding:12px 0 0 14px; }
+#pdf2rea-pref-root .p2r-notice { border-left:3px solid var(--accent-blue, #1b6acb); padding:9px 12px; background:var(--material-stripe, #f3f5f7); font-size:.93em; line-height:1.6; }
+#pdf2rea-pref-root .pdf2rea-pill { display:inline-block; border-radius:5px; padding:4px 8px; font-size:.92em; background:var(--material-stripe, #f3f5f7); }
+#pdf2rea-pref-root .pdf2rea-pill[data-state="ok"] { background:#e7f3eb; color:#23633c; }
+#pdf2rea-pref-root .pdf2rea-pill[data-state="missing"] { background:#fbeceb; color:#9a352d; }
+#pdf2rea-pref-root .p2r-output-head, #pdf2rea-pref-root .p2r-output-row { display:grid; grid-template-columns:minmax(0,1fr) minmax(90px,.45fr); gap:10px; margin:4px 0; }
+#pdf2rea-pref-root .p2r-output-head { color:var(--fill-secondary, #60656c); font-size:.9em; margin-bottom:8px; }
+#pdf2rea-pref-root #pdf2rea-api-list > div { display:flex; flex-wrap:wrap; align-items:center; gap:6px; padding:10px 0; border-bottom:1px solid var(--material-divider, #d4d7dc); }
+#pdf2rea-pref-root #pdf2rea-engine-status { font-size:.92em; line-height:1.7; overflow-wrap:anywhere; }
+@media (prefers-color-scheme:dark) { #pdf2rea-pref-root input, #pdf2rea-pref-root select, #pdf2rea-pref-root textarea { background:var(--material-background, #26282b); border-color:var(--material-divider, #50545a); } #pdf2rea-pref-root .p2r-notice { background:var(--material-stripe, #282c31); } #pdf2rea-pref-root .p2r-tabs button[aria-selected="true"] { color:#a6caff; background:#20344d; } #pdf2rea-pref-root .pdf2rea-pill[data-state="ok"] { background:#183928; color:#8ed9a8; } #pdf2rea-pref-root .pdf2rea-pill[data-state="missing"] { background:#442725; color:#f0aba4; } }
+</html:style>
+<groupbox id="pdf2rea-pref-root" onload="Zotero.pdf2rea.hooks.onPrefsEvent('load', { window });">
+<html:header class="p2r-header"><html:img src="chrome://pdf2rea/content/icons/favicon.svg" alt=""/><html:div><html:h2 id="pdf2rea-version-banner">知译 PDF 1.1.1</html:h2><html:p class="pdf2rea-hint">PDF 翻译与双语阅读</html:p></html:div></html:header><html:nav class="p2r-tabs" role="tablist" aria-label="知译 PDF 设置分组"><html:button type="button" role="tab" id="pdf2rea-tab-general" data-pdf2rea-tab="general" aria-controls="pdf2rea-panel-general" aria-selected="true" tabindex="0">翻译设置</html:button><html:button type="button" role="tab" id="pdf2rea-tab-services" data-pdf2rea-tab="services" aria-controls="pdf2rea-panel-services" aria-selected="false" tabindex="-1">翻译服务</html:button><html:button type="button" role="tab" id="pdf2rea-tab-output" data-pdf2rea-tab="output" aria-controls="pdf2rea-panel-output" aria-selected="false" tabindex="-1">排版与输出</html:button><html:button type="button" role="tab" id="pdf2rea-tab-enhance" data-pdf2rea-tab="enhance" aria-controls="pdf2rea-panel-enhance" aria-selected="false" tabindex="-1">翻译增强</html:button><html:button type="button" role="tab" id="pdf2rea-tab-connection" data-pdf2rea-tab="connection" aria-controls="pdf2rea-panel-connection" aria-selected="false" tabindex="-1">连接与诊断</html:button><html:button type="button" role="tab" id="pdf2rea-tab-about" data-pdf2rea-tab="about" aria-controls="pdf2rea-panel-about" aria-selected="false" tabindex="-1">关于</html:button></html:nav><html:section id="pdf2rea-panel-general" data-pdf2rea-panel="general" role="tabpanel" aria-labelledby="pdf2rea-tab-general"><html:h3>翻译设置</html:h3><html:p class="p2r-intro">语言、引擎与当前使用的翻译服务。</html:p><html:div class="p2r-grid"><html:div class="p2r-field"><html:label for="pdf2rea-engine">翻译引擎</html:label><html:select preference="extensions.zotero.pdf2rea.engine" id="pdf2rea-engine">
+        <html:option value="pdf2zh_next">PDF2zh Next · 默认引擎</html:option>
+        <html:option value="pdf2zh">PDF2zh 1.x · 兼容模式</html:option>
+      </html:select>
+      </html:div><html:div class="p2r-field"><html:label for="pdf2rea-next_service">翻译服务</html:label><html:select id="pdf2rea-next_service" preference="extensions.zotero.pdf2rea.next_service">
+        <html:option value="siliconflowfree">免费翻译（SiliconFlow Free，无需 Key）</html:option>
+        <html:option value="bing">Bing（无需 Key，可能限流）</html:option>
+        <html:option value="google">Google（无需 Key，可能限流）</html:option>
+        <html:option value="openailiked">OpenAI 兼容（自定义 URL）</html:option>
+        <html:option value="AliyunDashScope">AliyunDashScope</html:option>
+        <html:option value="deepseek">DeepSeek（使用自己的 API 配置）</html:option>
+        <html:option value="openai">openai</html:option>
+        <html:option value="gemini">gemini</html:option>
+        <html:option value="silicon">silicon</html:option>
+        <html:option value="zhipu">zhipu</html:option>
+        <html:option value="modelscope">modelscope</html:option>
+        <html:option value="qwen-mt">qwen-mt</html:option>
+        <html:option value="deepl">deepl</html:option>
+        <html:option value="tencent">tencent</html:option>
+        <html:option value="grok">grok</html:option>
+        <html:option value="dify">dify</html:option>
+        <html:option value="argos">argos</html:option>
+        <html:option value="ollama">ollama</html:option>
+        <html:option value="xinference">xinference</html:option>
+        <html:option value="anythingllm">anythingllm</html:option>
+        <html:option value="azure-openai">azure-openai</html:option>
+        <html:option value="azure">azure</html:option>
+        <html:option value="groq">groq</html:option>
+        <html:option value="claudecode">claudecode</html:option>
+      </html:select>
+      </html:div></html:div><html:div class="p2r-grid"><html:div class="p2r-field"><html:label for="pdf2rea-sourceLang">源语言</html:label><html:input preference="extensions.zotero.pdf2rea.sourceLang" type="text" size="6" id="pdf2rea-sourceLang" />
+    <html:p class="pdf2rea-hint">填写语言代码，例如 en、ja。</html:p></html:div><html:div class="p2r-field"><html:label for="pdf2rea-targetLang">目标语言</html:label><html:select id="pdf2rea-targetLang" preference="extensions.zotero.pdf2rea.targetLang">
+        <html:option value="en">English</html:option>
+        <html:option value="zh-CN">简体中文</html:option>
+        <html:option value="zh-TW">繁體中文</html:option>
+        <html:option value="ja">日本語</html:option>
+        <html:option value="ko">한국어</html:option>
+        <html:option value="fr">Français</html:option>
+        <html:option value="de">Deutsch</html:option>
+        <html:option value="es">Español</html:option>
+        <html:option value="ru">Русский</html:option>
+      </html:select>
+    </html:div></html:div><html:p id="pdf2rea-service-summary" class="p2r-notice"></html:p><html:div class="p2r-subsection"><html:h4>开始翻译</html:h4><html:p class="pdf2rea-hint">在文献库中选择文献或 PDF 附件，右键打开 知译 PDF，可选择翻译 PDF、裁剪白边、双语对照或裁剪并对照。设置会自动保存。</html:p><vbox class="p2r-checks"><checkbox preference="extensions.zotero.pdf2rea.showProgress" label="显示翻译进度窗口" />
+    </vbox></html:div><html:details class="p2r-details"><html:summary>性能参数</html:summary><html:div class="p2r-details-body"><html:div class="p2r-grid"><html:div class="p2r-field"><html:label for="pdf2rea-qps">每秒请求上限</html:label><html:input id="pdf2rea-qps" type="number" min="1" max="200" size="6" preference="extensions.zotero.pdf2rea.qps" />
+      </html:div><html:div class="p2r-field"><html:label for="pdf2rea-threadNum">并发线程</html:label><html:input id="pdf2rea-threadNum" type="number" min="1" max="16" size="6" preference="extensions.zotero.pdf2rea.threadNum" />
+      </html:div><html:div class="p2r-field"><html:label for="pdf2rea-poolSize">进程池大小</html:label><html:input id="pdf2rea-poolSize" type="number" min="0" max="16" size="6" preference="extensions.zotero.pdf2rea.poolSize" />
+    <html:p class="pdf2rea-hint">0 表示使用引擎默认值。</html:p></html:div></html:div></html:div></html:details></html:section><html:section id="pdf2rea-panel-services" data-pdf2rea-panel="services" role="tabpanel" aria-labelledby="pdf2rea-tab-services"><html:h3>翻译服务</html:h3><html:p class="p2r-intro">管理自己的 API 配置，或继续使用免费翻译。</html:p><html:p class="pdf2rea-hint">免费翻译无需 API Key。使用自有服务时，填写并保存对应配置；可随时切回免费服务。</html:p><html:div class="p2r-subsection"><html:h4>已保存的服务</html:h4><html:div id="pdf2rea-api-list"></html:div></html:div><html:div class="p2r-subsection"><html:h4>添加或编辑配置</html:h4><html:div class="p2r-grid"><html:div class="p2r-field"><html:label for="pdf2rea-api-service">服务名称</html:label><html:input id="pdf2rea-api-service" type="text" size="16" placeholder="deepseek" />
+    <html:p class="pdf2rea-hint">例如 deepseek、openailiked。与“翻译设置”中的服务对应。</html:p></html:div><html:div class="p2r-field"><html:label for="pdf2rea-api-model">模型</html:label><html:input id="pdf2rea-api-model" type="text" size="22" placeholder="模型名称" />
+  </html:div></html:div><html:div class="p2r-field"><html:label for="pdf2rea-api-url">API 地址</html:label><html:input id="pdf2rea-api-url" type="text" size="34" placeholder="https://api…/v1" />
+    <html:p class="pdf2rea-hint">DeepSeek 使用官方地址；第三方接口请选择 OpenAI 兼容服务。</html:p></html:div><html:div class="p2r-field"><html:label for="pdf2rea-api-key">API Key</html:label><html:input id="pdf2rea-api-key" type="password" size="28" placeholder="sk-…" />
+  </html:div><html:details class="p2r-details"><html:summary>额外请求参数</html:summary><html:div class="p2r-details-body"><html:div class="p2r-field"><html:label for="pdf2rea-api-extra">JSON 参数</html:label><html:textarea id="pdf2rea-api-extra" rows="3">{}</html:textarea>
+  </html:div></html:div></html:details><hbox><html:button id="pdf2rea-btn-api-save">保存并激活</html:button>
+    <html:button id="pdf2rea-btn-api-clear">清空表单</html:button>
+    <html:span id="pdf2rea-api-state" class="pdf2rea-pill">未保存</html:span>
+  </hbox></html:div></html:section><html:section id="pdf2rea-panel-output" data-pdf2rea-panel="output" role="tabpanel" aria-labelledby="pdf2rea-tab-output"><html:h3>排版与输出</html:h3><html:p class="p2r-intro">设置译文的版式，以及完成后保存和打开的附件。</html:p><html:div class="p2r-subsection"><html:h4>保存到文献条目</html:h4><html:p class="pdf2rea-hint">选择需要添加到原文献条目的译文附件。</html:p><html:div class="p2r-output-head"><html:span>附件类型</html:span><html:span>完成后打开</html:span></html:div><hbox class="p2r-output-row"><checkbox id="pdf2rea-mono" preference="extensions.zotero.pdf2rea.mono" label="纯译文" />
+      <checkbox preference="extensions.zotero.pdf2rea.mono-open" label="自动打开" /></hbox><hbox class="p2r-output-row"><checkbox id="pdf2rea-dual" preference="extensions.zotero.pdf2rea.dual" label="双语对照" />
+      <checkbox preference="extensions.zotero.pdf2rea.dual-open" label="自动打开" /></hbox><hbox class="p2r-output-row"><checkbox preference="extensions.zotero.pdf2rea.mono-cut" label="纯译文 · 裁剪白边" /><checkbox preference="extensions.zotero.pdf2rea.mono-cut-open" label="自动打开" /></hbox><hbox class="p2r-output-row"><checkbox preference="extensions.zotero.pdf2rea.dual-cut" label="双语对照 · 裁剪白边" /><checkbox preference="extensions.zotero.pdf2rea.dual-cut-open" label="自动打开" /></hbox><hbox class="p2r-output-row"><checkbox preference="extensions.zotero.pdf2rea.compare" label="独立对照排版" /><checkbox preference="extensions.zotero.pdf2rea.compare-open" label="自动打开" /></hbox><hbox class="p2r-output-row"><checkbox preference="extensions.zotero.pdf2rea.crop-compare" label="裁剪并对照" /><checkbox preference="extensions.zotero.pdf2rea.crop-compare-open" label="自动打开" /></hbox></html:div><html:div class="p2r-subsection"><html:h4>版面与命名</html:h4><html:div class="p2r-grid"><html:div class="p2r-field"><html:label for="pdf2rea-dualMode">对照版式</html:label><html:select id="pdf2rea-dualMode" preference="extensions.zotero.pdf2rea.dualMode">
+        <html:option value="LR">左右</html:option>
+        <html:option value="TB">上下</html:option>
+      </html:select>
+      </html:div><html:div class="p2r-field"><html:label for="pdf2rea-fontFamily">译文字体</html:label><html:select id="pdf2rea-fontFamily" preference="extensions.zotero.pdf2rea.fontFamily">
+        <html:option value="auto">自动选择</html:option>
+        <html:option value="serif">衬线字体</html:option>
+        <html:option value="sans-serif">无衬线字体</html:option>
+        <html:option value="script">手写字体</html:option>
+      </html:select>
+      </html:div></html:div><vbox class="p2r-checks"><checkbox id="pdf2rea-rename" preference="extensions.zotero.pdf2rea.rename" label="使用文献短标题命名附件" />
+    <checkbox id="pdf2rea-noWatermark" preference="extensions.zotero.pdf2rea.noWatermark" label="不添加译文水印" />
+      </vbox></html:div><html:details class="p2r-details"><html:summary>高级输出选项</html:summary><html:div class="p2r-details-body"><html:div class="p2r-field"><html:label for="pdf2rea-skipLastPages">跳过末尾页数</html:label><html:input id="pdf2rea-skipLastPages" type="number" min="0" max="50" size="5" preference="extensions.zotero.pdf2rea.skipLastPages" />
+    </html:div><vbox class="p2r-checks"><checkbox id="pdf2rea-onlyIncludeTranslatedPage" preference="extensions.zotero.pdf2rea.onlyIncludeTranslatedPage" label="只输出包含译文的页面" />
+    <checkbox preference="extensions.zotero.pdf2rea.noMono" label="不生成纯译文文件" />
+    <checkbox preference="extensions.zotero.pdf2rea.noDual" label="不生成双语对照文件" />
+    <checkbox preference="extensions.zotero.pdf2rea.transFirst" label="译文在前" />
+    </vbox><html:p class="pdf2rea-hint">“不生成”控制引擎产物，上方“保存到文献条目”控制附件导入；使用时请保持两处选择一致。</html:p></html:div></html:details></html:section><html:section id="pdf2rea-panel-enhance" data-pdf2rea-panel="enhance" role="tabpanel" aria-labelledby="pdf2rea-tab-enhance"><html:h3>翻译增强</html:h3><html:p class="p2r-intro">根据文档特点调整上下文、术语、表格与符号处理。</html:p><html:div class="p2r-subsection"><html:h4>跨页段落</html:h4><html:p class="pdf2rea-hint">结合跨页上下文翻译，再分配回原页。需要支持大语言模型的服务；PDF 仍保留分页。</html:p><vbox class="p2r-checks"><checkbox id="pdf2rea-fixCrossPage" preference="extensions.zotero.pdf2rea.fixCrossPage" label="合并跨页段落后翻译" />
+    <checkbox id="pdf2rea-fixCrossPageStrict" preference="extensions.zotero.pdf2rea.fixCrossPageStrict" label="仅合并未完句" />
+    </vbox></html:div><html:p class="pdf2rea-hint">如果跨页处已有句号但仍属同一段，可取消“仅合并未完句”，结合版面识别。</html:p><html:div class="p2r-subsection"><html:h4>术语与数字</html:h4><html:p class="pdf2rea-hint">在同一文档中尽量保持术语与数字写法一致。术语提示需要大语言模型服务。</html:p><vbox class="p2r-checks"><checkbox id="pdf2rea-fixTerminology" preference="extensions.zotero.pdf2rea.fixTerminology" label="使用术语表和一致性规则" />
+    </vbox><html:div class="p2r-field"><html:label for="pdf2rea-numericPolicy">数字风格</html:label><html:select id="pdf2rea-numericPolicy" preference="extensions.zotero.pdf2rea.numericPolicy">
+        <html:option value="arabic">阿拉伯数字</html:option>
+        <html:option value="auto">跟随文档多数写法</html:option>
+        <html:option value="chinese">中文数字</html:option>
+        <html:option value="keep">保留原文写法</html:option>
+      </html:select>
+    </html:div><html:details class="p2r-details"><html:summary>自定义术语</html:summary><html:div class="p2r-details-body"><html:div class="p2r-field"><html:label for="pdf2rea-glossaryPath">CSV 术语表</html:label><html:input id="pdf2rea-glossaryPath" type="text" size="40" preference="extensions.zotero.pdf2rea.glossaryPath" />
+      </html:div><html:button id="pdf2rea-btn-pickcsv">选择文件…</html:button>
+    <html:div class="p2r-field"><html:label for="pdf2rea-extraTerms">快捷术语</html:label><html:textarea id="pdf2rea-extraTerms" class="pdf2rea-terms" preference="extensions.zotero.pdf2rea.extraTerms" placeholder="recall = 召回率 | 查全率&#10;three-dimensional = 三维 | 3 维" rows="4" />
+  <html:p class="pdf2rea-hint">每行填写：英文 = 中文 | 禁止写法。</html:p></html:div></html:div></html:details></html:div><html:div class="p2r-subsection"><html:h4>表格与文本结构</html:h4><html:p class="pdf2rea-hint">保留单元格对应关系。机构列表、缩略语分行与异常译文保护随增强组件运行。</html:p><vbox class="p2r-checks"><checkbox id="pdf2rea-fixTables" preference="extensions.zotero.pdf2rea.fixTables" label="翻译已识别表格中的文字" />
+    <checkbox id="pdf2rea-tableCells" preference="extensions.zotero.pdf2rea.tableCells" label="按单元格分别处理表格文字" />
+    </vbox></html:div><html:div class="p2r-subsection"><html:h4>引用与符号</html:h4><html:p class="pdf2rea-hint">减少引用号、上标附近的断裂；保留明确的公式内容。</html:p><vbox class="p2r-checks"><checkbox id="pdf2rea-fixSuperscripts" preference="extensions.zotero.pdf2rea.fixSuperscripts" label="识别被误当作公式的引用和普通符号" />
+  </vbox></html:div><html:details class="p2r-details"><html:summary>识别与兼容选项</html:summary><html:div class="p2r-details-body"><vbox class="p2r-checks"><checkbox id="pdf2rea-autoOcr" preference="extensions.zotero.pdf2rea.autoOcr" label="自动识别扫描页并尝试 OCR" />
+      <checkbox preference="extensions.zotero.pdf2rea.ocr" label="手动 OCR 兼容模式" />
+    <checkbox id="pdf2rea-enhanceCompatibility" preference="extensions.zotero.pdf2rea.enhanceCompatibility" label="增强字体兼容性" />
+      <checkbox preference="extensions.zotero.pdf2rea.disableRichTextTranslate" label="关闭富文本翻译" />
+    <checkbox id="pdf2rea-translateTableText" preference="extensions.zotero.pdf2rea.translateTableText" label="使用引擎内置表格识别选项" />
+  <checkbox preference="extensions.zotero.pdf2rea.saveGlossary" label="保存自动提取的术语表" />
+    <checkbox preference="extensions.zotero.pdf2rea.disableGlossary" label="关闭自动术语提取" />
+    </vbox></html:div></html:details></html:section><html:section id="pdf2rea-panel-connection" data-pdf2rea-panel="connection" role="tabpanel" aria-labelledby="pdf2rea-tab-connection"><html:h3>连接与诊断</html:h3><html:p class="p2r-intro">检查本机服务与翻译增强组件。</html:p><html:div class="p2r-subsection"><html:h4>本机翻译服务</html:h4><html:div class="p2r-field"><html:label for="pdf2rea-new_serverip">服务地址</html:label><html:input id="pdf2rea-new_serverip" type="text" size="34" preference="extensions.zotero.pdf2rea.new_serverip" />
+      </html:div><hbox><html:button id="pdf2rea-btn-start-service">启动/重连</html:button>
+      <html:button id="pdf2rea-btn-probe">检测连接</html:button>
+      <html:span id="pdf2rea-probe-state" class="pdf2rea-pill">—</html:span>
+    </hbox><html:p class="pdf2rea-hint">默认地址 http://127.0.0.1:8891。连接异常时可启动或重新连接服务。</html:p><html:details class="p2r-details"><html:summary>服务目录</html:summary><html:div class="p2r-details-body"><html:div class="p2r-field"><html:label for="pdf2rea-serverDir">独立服务目录</html:label><html:input id="pdf2rea-serverDir" type="text" size="44" preference="extensions.zotero.pdf2rea.serverDir" />
+      <html:p class="pdf2rea-hint">留空时自动使用 ~/.pdf2rea/server。</html:p></html:div><html:button id="pdf2rea-btn-pickdir">自动定位</html:button>
+    </html:div></html:details></html:div><html:div class="p2r-subsection"><html:h4>翻译增强组件</html:h4><hbox><html:span id="pdf2rea-engine-pill" class="pdf2rea-pill">检测中…</html:span>
+    <html:button id="pdf2rea-btn-engine-refresh">刷新状态</html:button>
+  </hbox><html:p class="pdf2rea-hint">组件随翻译引擎加载；版本可以与插件界面版本不同。</html:p><hbox><html:button id="pdf2rea-btn-engine-install">安装 / 更新组件</html:button>
+    </hbox></html:div><html:details class="p2r-details"><html:summary>上次翻译与运行诊断</html:summary><html:div class="p2r-details-body"><html:p class="pdf2rea-hint">以下为实际处理次数，不代表翻译准确率。</html:p><html:div id="pdf2rea-engine-status"></html:div><html:p id="pdf2rea-engine-target" class="pdf2rea-hint"></html:p><vbox class="p2r-checks"><checkbox preference="extensions.zotero.pdf2rea.skipClean" label="保留翻译临时文件" />
+    </vbox></html:div></html:details><html:details class="p2r-details"><html:summary>组件维护</html:summary><html:div class="p2r-details-body"><html:p class="pdf2rea-hint">移除组件会关闭 知译 PDF 的翻译增强。已保存的译文和原文不会被删除。</html:p><html:button id="pdf2rea-btn-engine-remove">移除增强组件</html:button>
+    </html:div></html:details></html:section><html:section id="pdf2rea-panel-about" data-pdf2rea-panel="about" role="tabpanel" aria-labelledby="pdf2rea-tab-about"><html:h3>关于</html:h3><html:p class="p2r-intro">版本、更新方式与兼容信息。</html:p><html:div class="p2r-subsection"><html:h4>知译 PDF</html:h4><html:p class="pdf2rea-hint">在 Zotero 中翻译 PDF，支持纯译文、双语对照、裁剪与排版增强。</html:p><html:p id="pdf2rea-loaded-version" class="pdf2rea-hint">插件版本 1.1.1</html:p><html:p class="pdf2rea-hint">本项目基于 PDF2zh / zotero-pdf2zh 开发，兼容其服务协议，使用 PDF2zh Next / BabelDOC 翻译引擎。感谢上游作者与贡献者。</html:p><html:p class="pdf2rea-hint">开源许可：GNU AGPL-3.0。插件原内部标识保留，用于兼容已有设置。</html:p><hbox><html:button id="pdf2rea-btn-source">项目源码</html:button><html:button id="pdf2rea-btn-upstream">上游 PDF2zh</html:button><html:button id="pdf2rea-btn-license">开源许可</html:button></hbox></html:div><html:div class="p2r-subsection"><html:h4>更新与使用</html:h4><html:p class="pdf2rea-hint">当前通过 XPI 文件分发。更新时，在 Zotero 插件管理器中选择“从文件安装”，无需卸载旧版。</html:p><html:p class="pdf2rea-hint">翻译结果取决于原文版面和所选服务。重新翻译时请选择英文原始 PDF；升级不会重排已有译文。</html:p></html:div><html:details class="p2r-details"><html:summary>旧版引擎兼容</html:summary><html:div class="p2r-details-body"><html:p class="pdf2rea-hint">仅在已经单独准备 PDF2zh 1.x 环境时使用；常规翻译保持默认引擎。</html:p><html:div class="p2r-field"><html:label for="pdf2rea-service">PDF2zh 1.x 服务</html:label><html:input type="text" preference="extensions.zotero.pdf2rea.service" id="pdf2rea-service" />
+      </html:div><html:div class="p2r-field"><html:label for="pdf2rea-fontFile">自定义字体文件</html:label><html:input type="text" preference="extensions.zotero.pdf2rea.fontFile" id="pdf2rea-fontFile" />
+    </html:div><vbox class="p2r-checks"><checkbox preference="extensions.zotero.pdf2rea.skipSubsetFonts" label="跳过字体子集化" />
+    <checkbox preference="extensions.zotero.pdf2rea.babeldoc" label="使用 BabelDOC 实验模式" />
+    </vbox></html:div></html:details></html:section></groupbox>

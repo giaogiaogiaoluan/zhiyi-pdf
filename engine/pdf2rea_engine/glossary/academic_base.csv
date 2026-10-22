@@ -1,0 +1,93 @@
+source,target,tgt_lng,avoid
+three-dimensional,三维,zh-CN,3 维|三 维|3D 维
+two-dimensional,二维,zh-CN,2 维|2D 维
+one-dimensional,一维,zh-CN,1 维
+deep learning,深度学习,zh-CN,
+machine learning,机器学习,zh-CN,
+neural network,神经网络,zh-CN,
+convolutional neural network,卷积神经网络,zh-CN,
+transformer,Transformer,zh-CN,
+attention mechanism,注意力机制,zh-CN,
+self-attention,自注意力,zh-CN,
+fine-tuning,微调,zh-CN,热调|微调整
+pre-training,预训练,zh-CN,
+ablation study,消融实验,zh-CN,消融研究
+baseline,基线,zh-CN,基准线
+state-of-the-art,最先进,zh-CN,当前最优|最先进水平
+benchmark,基准测试,zh-CN,
+dataset,数据集,zh-CN,
+cross-validation,交叉验证,zh-CN,
+ground truth,真实值,zh-CN,地面真值|基准真值
+false positive,假阳性,zh-CN,误报
+false negative,假阴性,zh-CN,漏报
+precision,精确率,zh-CN,精度
+recall,召回率,zh-CN,查全率
+F1 score,F1 分数,zh-CN,F1值|F1 分值
+hyperparameter,超参数,zh-CN,
+gradient descent,梯度下降,zh-CN,
+loss function,损失函数,zh-CN,代价函数
+objective function,目标函数,zh-CN,
+convergence,收敛,zh-CN,
+overfitting,过拟合,zh-CN,
+underfitting,欠拟合,zh-CN,
+regularization,正则化,zh-CN,
+embedding,嵌入,zh-CN,
+feature extraction,特征提取,zh-CN,
+inference,推理,zh-CN,推断
+throughput,吞吐量,zh-CN,
+latency,时延,zh-CN,延迟
+scalability,可扩展性,zh-CN,可伸缩性
+robustness,鲁棒性,zh-CN,稳健性
+generalization,泛化,zh-CN,
+signal-to-noise ratio,信噪比,zh-CN,
+finite element analysis,有限元分析,zh-CN,
+boundary condition,边界条件,zh-CN,
+initial condition,初始条件,zh-CN,
+governing equation,控制方程,zh-CN,
+turbulence,湍流,zh-CN,
+computational fluid dynamics,计算流体力学,zh-CN,
+molecular dynamics,分子动力学,zh-CN,
+density functional theory,密度泛函理论,zh-CN,
+Monte Carlo,蒙特卡洛,zh-CN,
+standard deviation,标准差,zh-CN,
+confidence interval,置信区间,zh-CN,
+significance level,显著性水平,zh-CN,
+correlation coefficient,相关系数,zh-CN,
+root mean square error,均方根误差,zh-CN,
+mean absolute error,平均绝对误差,zh-CN,
+coefficient of determination,决定系数,zh-CN,
+sample size,样本量,zh-CN,
+random seed,随机种子,zh-CN,
+ab initio,第一性原理,zh-CN,从头算
+in situ,原位,zh-CN,
+operando,工况原位,zh-CN,
+nanostructure,纳米结构,zh-CN,
+heterostructure,异质结构,zh-CN,
+band gap,带隙,zh-CN,能带间隙
+charge transfer,电荷转移,zh-CN,
+activation energy,活化能,zh-CN,
+reaction pathway,反应路径,zh-CN,
+selectivity,选择性,zh-CN,
+conversion rate,转化率,zh-CN,
+yield,产率,zh-CN,收益
+photoluminescence,光致发光,zh-CN,
+spectroscopy,光谱学,zh-CN,
+diffractometry,衍射,zh-CN,
+microscopy,显微术,zh-CN,
+figure,图,zh-CN,
+table,表,zh-CN,
+equation,公式,zh-CN,方程
+theorem,定理,zh-CN,
+lemma,引理,zh-CN,
+proof,证明,zh-CN,
+hypothesis,假设,zh-CN,
+experiment,实验,zh-CN,
+simulation,仿真,zh-CN,模拟
+approximately,约,zh-CN,大约
+respectively,分别,zh-CN,
+hereinafter,下文,zh-CN,
+herein,在此,zh-CN,
+therefore,因此,zh-CN,
+moreover,此外,zh-CN,
+furthermore,而且,zh-CN,
+et al.,等,zh-CN,

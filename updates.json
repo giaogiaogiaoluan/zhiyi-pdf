@@ -1,0 +1,19 @@
+{
+  "addons": {
+    "pdf2rea@qoder.dev": {
+      "updates": [
+        {
+          "version": "1.1.1",
+          "update_link": "https://github.com/giaogiaogiaoluan/zhiyi-pdf/releases/download/v1.1.1/ZhiYi-PDF-1.1.1.xpi",
+          "update_hash": "sha256:1187401894880a86a829b1d018e396b45110c65a64b180568aed3262577b3b76",
+          "applications": {
+            "zotero": {
+              "strict_min_version": "6.999",
+              "strict_max_version": "10.*"
+            }
+          }
+        }
+      ]
+    }
+  }
+}

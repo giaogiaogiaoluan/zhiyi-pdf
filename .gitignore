@@ -1,0 +1,38 @@
+# 本机环境、配置、翻译数据及诊断材料
+.runtime/
+backups/
+docs/evidence/
+:memory:*
+cache/
+translated/
+.env
+.env.*
+!.env.example
+*.db
+*.db-*
+*.sqlite*
+*.log
+*.ses
+*.pdf
+*.toml
+!pyproject.toml
+# 构建产物、模型与解释器
+.build/
+dist/
+release/
+.venv/
+venv/
+node_modules/
+__pycache__/
+*.py[cod]
+*.xpi
+*.zip
+.DS_Store
+# 认证材料
+*.pem
+*.key
+*.p12
+*.pfx
+
+# 构建生成的增强组件副本
+plugin/content/engine/

@@ -1,0 +1,20 @@
+{
+  "manifest_version": 2,
+  "name": "知译 PDF",
+  "version": "1.1.1",
+  "description": "基于 PDF2zh / zotero-pdf2zh 的 Zotero PDF 翻译插件，支持双语对照、跨页上下文、术语和排版增强。",
+  "author": "ZhiYi PDF contributors",
+  "icons": {
+    "48": "content/icons/favicon@0.5x.svg",
+    "96": "content/icons/favicon.svg"
+  },
+  "applications": {
+    "zotero": {
+      "id": "pdf2rea@qoder.dev",
+      "strict_min_version": "6.999",
+      "strict_max_version": "10.*",
+      "update_url": "https://raw.githubusercontent.com/giaogiaogiaoluan/zhiyi-pdf/main/updates.json"
+    }
+  },
+  "homepage_url": "https://github.com/giaogiaogiaoluan/zhiyi-pdf"
+}
