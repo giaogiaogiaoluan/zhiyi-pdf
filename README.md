@@ -4,7 +4,7 @@
 
 在 Zotero 中翻译论文 PDF，生成纯译文与双语对照，并提供跨页段落、术语、列表和表格文字处理。
 
-当前插件版本：**1.1.1**。翻译增强组件：**1.0.5**。本次发布调整名称、界面与开源分发，保持现有翻译算法、服务协议和默认设置。
+当前插件版本：**1.1.2**。翻译增强组件：**1.0.5**。本版修复对照、裁剪结果的路径处理及附件入库确认，保持现有翻译算法和默认设置。
 
 ![知译 PDF 设置界面](docs/images/settings.png)
 
@@ -34,12 +34,12 @@
 
 ## 安装与升级
 
-1. 在 [GitHub Releases](https://github.com/giaogiaogiaoluan/zhiyi-pdf/releases) 中选择 **1.1.1**，下载 `ZhiYi-PDF-1.1.1.xpi`。首次准备服务时，还需要同版本源码 ZIP。
+1. 在 [GitHub Releases](https://github.com/giaogiaogiaoluan/zhiyi-pdf/releases) 中选择 **1.1.2**，下载 `ZhiYi-PDF-1.1.2.xpi`。首次准备服务时，还需要同版本源码 ZIP。
 2. 打开 Zotero 的插件管理器，选择 **齿轮 → 从文件安装插件**，选择 XPI。
-3. 按 Zotero 提示重启，在“设置 → 知译 PDF → 关于”中确认插件版本为 **1.1.1**。
+3. 按 Zotero 提示重启，在“设置 → 知译 PDF → 关于”中确认插件版本为 **1.1.2**。
 4. 按下一节准备独立翻译服务，检测连接后开始使用。
 
-已有早期版本的用户直接安装新版 XPI 即可。内部插件 ID、偏好键和增强模块路径继续沿用历史名称，以保留设置和升级关系；因此部分技术路径中仍会出现 `pdf2rea`。插件版本为 1.1.1、增强组件版本为 1.0.5 是正常组合。
+已有早期版本的用户直接安装新版 XPI 即可。内部插件 ID、偏好键和增强模块路径继续沿用历史名称，以保留设置和升级关系；因此部分技术路径中仍会出现 `pdf2rea`。插件版本为 1.1.2、增强组件版本为 1.0.5 是正常组合。
 
 ## 准备翻译服务
 
@@ -56,6 +56,8 @@
 ```sh
 python3 scripts/setup_runtime.py --source /path/to/zotero-pdf2zh/server
 ```
+
+已有独立服务会在启动时检查兼容组件。仅在确认属于本插件且没有活动任务时升级重启；无法核实旧进程时会提示先退出独立服务，不会操作原版8890。
 
 准备完成后运行启动入口，在“连接与诊断”中检测默认地址 **`http://127.0.0.1:8891`**。已有独立环境的用户无需重复准备；插件会尝试启动本机服务。增强组件未安装或需要更新时，使用该分区的组件安装按钮。
 
@@ -94,7 +96,7 @@ VENV_PY="$HOME/.pdf2rea/server/zotero-pdf2zh-next-venv/bin/python" bash scripts/
 VENV_PY="$HOME/.pdf2rea/server/zotero-pdf2zh-next-venv/bin/python" bash scripts/build_xpi.sh
 ```
 
-构建产物为 `dist/ZhiYi-PDF-1.1.1.xpi`。`--skip-wiring` 会跳过真实引擎检查，不能据此宣称完整集成验证通过。目录说明、测试与兼容约定见 [开发说明](docs/development.md)，版本变化见 [更新记录](CHANGELOG.md)。
+构建产物为 `dist/ZhiYi-PDF-1.1.2.xpi`。`--skip-wiring` 会跳过真实引擎检查，不能据此宣称完整集成验证通过。目录说明、测试与兼容约定见 [开发说明](docs/development.md)，版本变化见 [更新记录](CHANGELOG.md)。
 
 ## 许可证与致谢
 

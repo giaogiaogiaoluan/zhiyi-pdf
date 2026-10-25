@@ -1,7 +1,7 @@
 {
   "manifest_version": 2,
   "name": "知译 PDF",
-  "version": "1.1.1",
+  "version": "1.1.2",
   "description": "基于 PDF2zh / zotero-pdf2zh 的 Zotero PDF 翻译插件，支持双语对照、跨页上下文、术语和排版增强。",
   "author": "ZhiYi PDF contributors",
   "icons": {

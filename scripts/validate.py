@@ -29,6 +29,7 @@ REQUIRED_PLUGIN_FILES = [
     "content/scripts/pdf2rea.js",
     "content/preferences.xhtml",
     "content/runtime/service_control.py",
+    "content/runtime/server_compat.py",
     "content/icons/favicon.svg",
 ]
 FORBIDDEN_IN_XPI = ("__pycache__", ".DS_Store", ".pyc", ".git")

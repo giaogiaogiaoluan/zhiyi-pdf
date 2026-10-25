@@ -32,6 +32,44 @@ const check = (name, condition, detail = "") => {
 const prefs = new Map();
 const writes = [];
 const fetched = [];
+const subprocessCalls = [];
+// Stateful file/import doubles: an import must consume bytes that the plugin
+// actually wrote, and a saved attachment survives deletion of that temp file.
+// This is still a contract test, not a substitute for native Zotero persistence.
+const binaryFiles = new Map();
+const binaryWrites = [];
+const removedFiles = [];
+const importCalls = [];
+const savedAttachments = [];
+let importBehavior = null;
+let nextAttachmentID = 100;
+let pollingClock = null;
+const ContractDate = class extends Date {
+  static now() { return pollingClock ?? Date.now(); }
+};
+async function importFromFile(spec) {
+  const data = binaryFiles.get(spec.file);
+  if (!data) throw new Error("attachment source was not written: " + spec.file);
+  const call = { ...spec, bytes: Uint8Array.from(data) };
+  importCalls.push(call);
+  if (importBehavior) return await importBehavior(spec, importCalls.length);
+  const result = { id: nextAttachmentID++, parentItemID: spec.parentItemID,
+    libraryID: spec.libraryID, title: spec.title, bytes: Uint8Array.from(data) };
+  savedAttachments.push(result);
+  return result;
+}
+function resetImports() {
+  importCalls.length = 0;
+  savedAttachments.length = 0;
+  binaryWrites.length = 0;
+  removedFiles.length = 0;
+  importBehavior = null;
+}
+async function outcome(fn) {
+  try { return { value: await fn(), error: null }; }
+  catch (error) { return { value: undefined, error }; }
+}
+const errorText = (result) => String(result.error?.message || result.error || "");
 
 const ZOTERO_KEYS_ACCEPTED = [
   "engine", "service", "next_service", "sourceLang", "targetLang", "skipLastPages",
@@ -46,11 +84,13 @@ const ZOTERO_KEYS_ACCEPTED = [
 
 const sandbox = {
   console,
+  Date: ContractDate,
   btoa: (binary) => Buffer.from(binary, "binary").toString("base64"),
   setTimeout,
   clearTimeout,
   alert: (text) => { sandbox.__alerts.push(text); },
   __alerts: [],
+  __progressDescriptions: [],
   Services: {
     io: { newURI: (u) => ({ spec: u }) },
     scriptloader: { loadSubScript: () => {} },
@@ -62,10 +102,35 @@ const sandbox = {
   },
   Components: { interfaces: {}, classes: { createInstance: () => ({}) } },
   Cc: {}, Cu: { unload: () => {} },
+  ChromeUtils: {
+    importESModule: (module) => {
+      if (module.endsWith("/NetUtil.sys.mjs")) {
+        return { NetUtil: { newChannel: ({ uri }) => ({ spec: uri }) } };
+      }
+      if (module.endsWith("/Subprocess.sys.mjs")) {
+        return { Subprocess: { call: async (spec) => {
+          subprocessCalls.push(spec);
+          return { stdout: { readString: async () => JSON.stringify({ ok: true, status: "running" }) },
+            wait: async () => ({ exitCode: 0 }) };
+        } } };
+      }
+      throw new Error("unexpected Gecko module in contract test: " + module);
+    },
+  },
   IOUtils: {
-    exists: async () => true,
-    read: async () => new Uint8Array([0x25, 0x50, 0x44, 0x46, 0x2d, 1, 2, 3]),
-    write: async () => {},
+    exists: async (p) => !/\.pdf$/i.test(p) || binaryFiles.has(p) || fs.existsSync(p),
+    read: async (p) => {
+      if (binaryFiles.has(p)) return Uint8Array.from(binaryFiles.get(p));
+      if (p.startsWith(ARTIFACTS + path.sep) && fs.existsSync(p)) {
+        return Uint8Array.from(fs.readFileSync(p));
+      }
+      throw new Error("test file does not exist: " + p);
+    },
+    write: async (p, bytes) => {
+      const copy = Uint8Array.from(bytes);
+      binaryFiles.set(p, copy);
+      binaryWrites.push({ path: p, bytes: copy });
+    },
     writeUTF8: async (p, contents) => {
       writes.push({ path: p, contents });
       // mirror to disk so the python companion can feed these bytes to the real
@@ -73,7 +138,7 @@ const sandbox = {
       const mirror = path.join(ARTIFACTS, "mirror", path.basename(p));
       fs.writeFileSync(mirror, contents, "utf8");
     },
-    remove: async () => {},
+    remove: async (p) => { removedFiles.push(p); binaryFiles.delete(p); },
     makeDirectory: async () => {},
     getChildren: async (dir) => [path.join(dir, "python3.12")],
   },
@@ -94,7 +159,9 @@ const sandbox = {
     initializationPromise: Promise.resolve(),
     unlockPromise: Promise.resolve(),
     uiReadyPromise: Promise.resolve(),
-    Promise: { delay: () => Promise.resolve() },
+    Promise: { delay: async (milliseconds) => {
+      if (pollingClock !== null) pollingClock += Math.max(1, milliseconds);
+    } },
     logError: (e) => { sandbox.__errors.push(String(e)); },
     Prefs: {
       get: (key) => (prefs.has(key) ? prefs.get(key) : undefined),
@@ -104,18 +171,24 @@ const sandbox = {
     File: {
       getValidFileName: (name) => name.replace(/[\\/:*?"<>|]/g, "_"),
       getContentsAsync: async (p) => {
+        p = typeof p === "string" ? p : p.spec;
+        if (p.startsWith("chrome://pdf2rea/")) {
+          const resource = path.join(ROOT, "plugin", p.slice("chrome://pdf2rea/".length));
+          try { return fs.readFileSync(resource, "utf8"); } catch { return null; }
+        }
         if (p.endsWith("pdf2rea-runtime.json")) return JSON.stringify({owner:"pdf2rea@qoder.dev"});
         try { return fs.readFileSync(p, "utf8"); } catch { return null; }
       },
     },
     PreferencePanes: { register: (spec) => { sandbox.Zotero.__panes.push(spec); } },
     __panes: [],
-    Attachments: { importFromFile: async () => ({ id: 1 }) },
+    Attachments: { importFromFile },
     Items: { get: () => sandbox.__item },
     Reader: { open: () => {} },
     ProgressWindow: class {
       constructor() {}
-      changeHeadline() {} show() {} startCloseTimer() {} addDescription() {}
+      changeHeadline() {} show() {} startCloseTimer() {}
+      addDescription(text) { sandbox.__progressDescriptions.push(String(text)); }
       ItemProgress = class { setProgress() {} setText() {} setError() {} };
     },
     getMainWindows: () => [sandbox.__mainWindow],
@@ -161,6 +234,8 @@ itemMenu.id = "zotero-itemmenu";
 // registering its submenu twice, so the stub must behave the same way.
 const domById = { "zotero-itemmenu": itemMenu };
 const paneWindow = {
+  alert: (message) => { sandbox.__alerts.push(String(message)); },
+  ZoteroPane: { getSelectedItems: () => sandbox.__selectedItems || [] },
   document: {
     getElementById: (id) => domById[id] || null,
     createXULElement: (tag) => {
@@ -319,6 +394,15 @@ check("sends fileContent", JSON.parse(posted.options.body).fileContent.length > 
 check("llm_api omitted when unconfigured",
   !("llm_api" in JSON.parse(posted.options.body)));
 
+const beforeNoOutput = fetched.length;
+const noOutputConfig = { ...api.getServerConfig(), engine: "pdf2zh_next",
+  mono: false, dual: false, mono_cut: false, dual_cut: false, crop_compare: false, compare: false };
+const noOutput = await outcome(() => new api.EngineJob("", item, noOutputConfig, "translate")
+  .sendRequest("a.pdf", "AAAA", () => {}));
+check("all PDF outputs disabled rejects before any POST",
+  /未选择输出 PDF/.test(errorText(noOutput)) && fetched.length === beforeNoOutput,
+  `error=${errorText(noOutput)}, requests=${fetched.length - beforeNoOutput}`);
+
 api.setPref("llmApis", JSON.stringify([
   { key: "k1", service: "deepseek", model: "deepseek-v4-flash", apiKey: "sk-1",
     apiUrl: "https://api.deepseek.com", activate: true, extraData: {} },
@@ -363,8 +447,21 @@ for (const service of ["siliconflowfree", "bing", "google"]) {
 }
 api.setPref("llmApis", savedApis);
 check("switching free does not erase saved DeepSeek config", JSON.parse(api.getPref("llmApis"))[0].service === "deepseek");
-await job.importResults({ status: "success", fileList: ["x.zh-CN.mono.pdf"], filePaths: [] });
-check("imports translated file as attachment", true);
+resetImports();
+const firstImportedCount = await job.importResults({ status: "success", fileList: ["x.zh-CN.mono.pdf"], filePaths: [] });
+check("imports exactly one translated attachment and returns its count",
+  firstImportedCount === 1 && importCalls.length === 1 && savedAttachments.length === 1,
+  `count=${firstImportedCount}, calls=${importCalls.length}, saved=${savedAttachments.length}`);
+check("attachment import carries parent, library and PDF MIME type",
+  importCalls[0]?.parentItemID === 7 && importCalls[0]?.libraryID === 1
+    && importCalls[0]?.contentType === "application/pdf", JSON.stringify(importCalls[0]));
+check("attachment import uses the actual downloaded bytes written to a temp file",
+  binaryWrites.length === 1 && importCalls[0]?.file === binaryWrites[0]?.path
+    && Buffer.from(importCalls[0]?.bytes || []).equals(Buffer.from(binaryWrites[0]?.bytes || []))
+    && Buffer.from(importCalls[0]?.bytes || []).toString().startsWith("%PDF-"));
+check("temp PDF removed only after a saved attachment consumed it",
+  removedFiles.includes(importCalls[0]?.file) && !binaryFiles.has(importCalls[0]?.file)
+    && savedAttachments[0]?.bytes.length > 5);
 
 // ------------------------------------------------------- bootstrap contract ---
 const bootstrap = fs.readFileSync(path.join(ROOT, "plugin/bootstrap.js"), "utf8");
@@ -387,10 +484,12 @@ let blocked = false;
 try { await api.installPatchLayer(); } catch(e) { blocked = /独立/.test(e.message); }
 check("unmarked original server is rejected before patch writes", blocked);
 sandbox.Zotero.File.getContentsAsync = originalReader;
-let imported;
-sandbox.Zotero.Attachments.importFromFile = async (spec) => { imported=spec; return {id:17}; };
-await job.attach("/tmp/a.pdf", "a.mono.pdf", "mono", new Set());
-check("regular item id becomes attachment parent", imported.parentItemID === 7);
+resetImports();
+const attachSource = path.join(ARTIFACTS, "tmp", "attach-source.pdf");
+binaryFiles.set(attachSource, Uint8Array.from(Buffer.from("%PDF-1.7 attach stub")));
+await job.attach(attachSource, "a.mono.pdf", "mono", new Set());
+check("regular item id becomes attachment parent", importCalls[0]?.parentItemID === 7);
+binaryFiles.delete(attachSource);
 check("origin crop output gets its own type", api.EngineJob.fileType("a.cut.pdf") === "origin-cut");
 const originalFetch = sandbox.fetch;
 let downloads = 0;
@@ -406,6 +505,246 @@ check("original server URL rejected before any network request", originalPortBlo
 // errors collected
 check("no runtime errors during contract run", sandbox.__errors.length === 0,
   sandbox.__errors.slice(0, 3).join(" | "));
+
+// ------------------------------------------------ attachment lifecycle ----
+// Negative results must reject, not merely finish a job with zero attachments.
+const lifecycleFetch = sandbox.fetch;
+for (const badFiles of [[], ["terms.csv"]]) {
+  resetImports();
+  const result = await outcome(() => job.importResults({ status: "success", fileList: badFiles }));
+  check(badFiles.length ? "CSV-only success rejects without importing an attachment" : "empty success rejects without importing an attachment",
+    !!result.error && importCalls.length === 0,
+    `error=${errorText(result)}, calls=${importCalls.length}`);
+}
+for (const emptyImport of [undefined, null, {}, { id: null }, { id: 0 }]) {
+  resetImports();
+  importBehavior = async () => emptyImport;
+  const result = await outcome(() => job.importResults({ status: "success", fileList: ["missing-id.mono.pdf"] }));
+  check(`importFromFile result ${JSON.stringify(emptyImport) ?? "undefined"} rejects without a valid attachment ID`,
+    !!result.error && importCalls.length === 1,
+    `error=${errorText(result)}, calls=${importCalls.length}`);
+  check("failed import still removes the temporary PDF",
+    binaryWrites.length === 1 && removedFiles.includes(binaryWrites[0]?.path)
+      && !binaryFiles.has(binaryWrites[0]?.path));
+}
+resetImports();
+importBehavior = async () => { throw new Error("fixture-import-disk-full"); };
+const thrownImport = await outcome(() => job.importResults({ status: "success", fileList: ["disk-full.mono.pdf"] }));
+check("importFromFile exceptions propagate with their actionable cause",
+  /fixture-import-disk-full/.test(errorText(thrownImport)) && savedAttachments.length === 0);
+check("throwing import does not leave a temporary PDF",
+  binaryWrites.length === 1 && removedFiles.includes(binaryWrites[0]?.path));
+
+resetImports();
+const localOutput = path.join(ARTIFACTS, "backend", "local.mono.pdf");
+const localBytes = Uint8Array.from(Buffer.from("%PDF-1.7 local output"));
+binaryFiles.set(localOutput, localBytes);
+const localFetchCount = fetched.length;
+const localResult = await outcome(() => job.importResults({ status: "success",
+  fileList: ["local.mono.pdf"], filePaths: [localOutput] }));
+check("existing local output imports exact PDF bytes without a download",
+  !localResult.error && localResult.value === 1 && fetched.length === localFetchCount
+    && Buffer.from(savedAttachments[0]?.bytes || []).equals(Buffer.from(localBytes)));
+check("local server output is preserved after the attachment temp copy is removed",
+  binaryFiles.has(localOutput) && binaryWrites.length === 1
+    && removedFiles.includes(binaryWrites[0]?.path) && !removedFiles.includes(localOutput));
+binaryFiles.delete(localOutput);
+
+resetImports();
+sandbox.fetch = async (url, options) => String(url).includes("/translatedFile/")
+  ? { ok: true, arrayBuffer: async () => new TextEncoder().encode("<html>fixture-not-a-pdf</html>").buffer }
+  : lifecycleFetch(url, options);
+const invalidPdf = await outcome(() => job.importResults({ status: "success", fileList: ["invalid.mono.pdf"] }));
+check("PDF extension with non-PDF response bytes fails before temp write or import",
+  !!invalidPdf.error && importCalls.length === 0 && binaryWrites.length === 0,
+  `error=${errorText(invalidPdf)}, calls=${importCalls.length}, writes=${binaryWrites.length}`);
+sandbox.fetch = lifecycleFetch;
+
+resetImports();
+const duplicate = await outcome(() => job.importResults({ status: "success", fileList: ["same.mono.pdf", "same.mono.pdf"] }));
+check("duplicate result names import and count one attachment",
+  !duplicate.error && duplicate.value === 1 && importCalls.length === 1 && savedAttachments.length === 1,
+  `error=${errorText(duplicate)}, count=${duplicate.value}, calls=${importCalls.length}`);
+
+resetImports();
+const beforeMixedFetch = fetched.length;
+const mixed = await outcome(() => job.importResults({ status: "success", fileList: ["out.mono.pdf", "glossary.csv", "out.dual.pdf", "debug.txt"] }));
+check("multiple PDF outputs count saved attachments and skip auxiliary files",
+  !mixed.error && mixed.value === 2 && importCalls.length === 2 && savedAttachments.length === 2,
+  `error=${errorText(mixed)}, count=${mixed.value}, calls=${importCalls.length}`);
+check("auxiliary CSV/text files are never downloaded as PDFs",
+  !fetched.slice(beforeMixedFetch).some(entry => /glossary\.csv|debug\.txt/.test(entry.url)));
+
+resetImports();
+const childItem = {
+  isAttachment: () => true, isRegularItem: () => false,
+  parentItemID: 7, libraryID: 1, id: 70,
+  getFilePath: () => path.join(ARTIFACTS, "input.pdf"),
+  getDisplayTitle: () => "Selected source PDF",
+};
+const childJob = new api.EngineJob("", childItem, api.getServerConfig(), "translate");
+const childResult = await outcome(() => childJob.importResults({ status: "success", fileList: ["child.mono.pdf"] }));
+check("selected PDF child attaches the translation beside the source under its parent",
+  !childResult.error && childResult.value === 1 && importCalls[0]?.parentItemID === 7
+    && importCalls[0]?.libraryID === 1,
+  `error=${errorText(childResult)}, spec=${JSON.stringify(importCalls[0])}`);
+
+resetImports();
+let partialSaved;
+importBehavior = async (spec, callNumber) => {
+  if (callNumber === 2) throw new Error("fixture-second-import-failed");
+  partialSaved = { id: nextAttachmentID++, ...spec,
+    bytes: Uint8Array.from(binaryFiles.get(spec.file)) };
+  savedAttachments.push(partialSaved);
+  return partialSaved;
+};
+const partial = await outcome(() => job.importResults({ status: "success", fileList: ["partial.mono.pdf", "partial.dual.pdf"] }));
+check("later import failure rejects the task and preserves the first saved result",
+  /fixture-second-import-failed/.test(errorText(partial)) && importCalls.length === 2
+    && savedAttachments.length === 1 && partialSaved?.id > 0 && partialSaved?.bytes.length > 5);
+check("partial failure cleans temporary files for both attempted imports",
+  binaryWrites.length === 2 && binaryWrites.every(entry => removedFiles.includes(entry.path) && !binaryFiles.has(entry.path)));
+
+resetImports();
+const runPhases = [];
+const completeRun = await outcome(() => job.run((phase) => runPhases.push(phase)));
+check("complete EngineJob.run returns the real imported attachment count",
+  !completeRun.error && completeRun.value === 1 && importCalls.length === 1
+    && runPhases.includes("submitting") && runPhases.includes("importing"),
+  `error=${errorText(completeRun)}, count=${completeRun.value}, calls=${importCalls.length}`);
+
+// Exercise the actual polling methods with bounded virtual time. No external
+// endpoint is contacted; every request passes through the fetch double below.
+function installAsyncTaskFixture({ history = false, fail = false, empty = false } = {}) {
+  pollingClock = Date.now();
+  let taskReads = 0;
+  const requests = [];
+  sandbox.fetch = async (url, options) => {
+    const route = new URL(String(url)).pathname;
+    requests.push({ route, options });
+    if (route === "/translate") {
+      return { ok: true, text: async () => JSON.stringify({ status: "accepted", taskId: "fixture-async" }) };
+    }
+    if (route === "/api/tasks") {
+      taskReads += 1;
+      if (taskReads > 40) throw new Error("fixture polling request limit exceeded");
+      const task = taskReads === 1
+        ? { taskId: "fixture-async", status: "running", finished: false }
+        : { taskId: "fixture-async", status: fail ? "failed" : "success", finished: true,
+            result: { status: fail ? "error" : "success", message: fail ? "fixture-async-engine-failed" : "",
+              fileList: empty ? [] : ["async.mono.pdf"] } };
+      return { ok: true, json: async () => ({ tasks: history && taskReads > 1 ? [] : [task] }) };
+    }
+    if (route === "/api/history") {
+      return { ok: true, json: async () => ({ history: [{ taskId: "fixture-async", finished: true,
+        status: fail ? "failed" : "success", result: { status: fail ? "error" : "success",
+          message: fail ? "fixture-async-engine-failed" : "", fileList: empty ? [] : ["async.mono.pdf"] } }] }) };
+    }
+    return lifecycleFetch(url, options);
+  };
+  return requests;
+}
+for (const history of [false, true]) {
+  resetImports();
+  const requests = installAsyncTaskFixture({ history });
+  const result = await outcome(() => job.run(() => {}));
+  check(`accepted async job imports from ${history ? "history after queue removal" : "active task completion"}`,
+    !result.error && result.value === 1 && savedAttachments.length === 1
+      && requests.filter(entry => entry.route === "/translate").length === 1
+      && requests.filter(entry => entry.route === "/api/tasks").length >= 2
+      && (!history || requests.some(entry => entry.route === "/api/history")),
+    `error=${errorText(result)}, count=${result.value}, requests=${requests.length}`);
+}
+for (const history of [false, true]) {
+  resetImports();
+  installAsyncTaskFixture({ history, fail: true });
+  const result = await outcome(() => job.run(() => {}));
+  check(`async ${history ? "history" : "task"} failure reaches the caller and imports nothing`,
+    /fixture-async-engine-failed/.test(errorText(result)) && importCalls.length === 0,
+    `error=${errorText(result)}, calls=${importCalls.length}`);
+}
+resetImports();
+installAsyncTaskFixture({ empty: true });
+const asyncEmpty = await outcome(() => job.run(() => {}));
+check("completed async task with no files fails instead of claiming an import",
+  !!asyncEmpty.error && importCalls.length === 0,
+  `error=${errorText(asyncEmpty)}, calls=${importCalls.length}`);
+sandbox.fetch = lifecycleFetch;
+pollingClock = null;
+
+// A partially imported job must be counted as failed by the driver, while the
+// attachment that was already saved remains available to the user.
+resetImports();
+api.setPref("showProgress", true);
+api.setPref("llmApis", "[]");
+api.setPref("next_service", "siliconflowfree");
+sandbox.__selectedItems = [item];
+sandbox.__progressDescriptions.length = 0;
+sandbox.fetch = async (url, options) => String(url).endsWith("/translate")
+  ? { ok: true, text: async () => JSON.stringify({ status: "success", fileList: ["driver.mono.pdf", "driver.dual.pdf"] }) }
+  : lifecycleFetch(url, options);
+importBehavior = async (spec, callNumber) => {
+  if (callNumber === 2) throw new Error("fixture-driver-partial-import-failed");
+  const attachment = { id: nextAttachmentID++, ...spec,
+    bytes: Uint8Array.from(binaryFiles.get(spec.file)) };
+  savedAttachments.push(attachment);
+  return attachment;
+};
+const partialDriver = await outcome(() => api.processWorker("translate"));
+check("driver reports partial import as one failed task and keeps its saved PDF",
+  !partialDriver.error && partialDriver.value?.ok === 0 && partialDriver.value?.failed === 1
+    && importCalls.length === 2 && savedAttachments.length === 1
+    && sandbox.__progressDescriptions.some(text => /成功 0，失败 1/.test(text)),
+  `calls=${importCalls.length}, saved=${savedAttachments.length}, progress=${JSON.stringify(sandbox.__progressDescriptions)}`);
+sandbox.fetch = lifecycleFetch;
+sandbox.__selectedItems = [];
+
+// The driver must surface failure even when its optional progress popup is off.
+resetImports();
+api.setPref("showProgress", false);
+api.setPref("llmApis", "[]");
+api.setPref("next_service", "siliconflowfree");
+sandbox.__selectedItems = [item];
+const previousAlertCount = sandbox.__alerts.length;
+const previousErrorCount = sandbox.__errors.length;
+importBehavior = async () => { throw new Error("fixture-hidden-progress-import-failed"); };
+const hiddenFailure = await outcome(() => api.processWorker("translate"));
+check("showProgress=false still alerts an attachment import failure",
+  !hiddenFailure.error && hiddenFailure.value?.ok === 0 && hiddenFailure.value?.failed === 1
+    && sandbox.__alerts.slice(previousAlertCount).some(message => /fixture-hidden-progress-import-failed/.test(message)),
+  `error=${errorText(hiddenFailure)}, alerts=${JSON.stringify(sandbox.__alerts.slice(previousAlertCount))}`);
+check("hidden-progress import failure is also recorded for diagnostics",
+  sandbox.__errors.slice(previousErrorCount).some(message => /fixture-hidden-progress-import-failed/.test(message)));
+// A failed job must release the driver lock so a retry can actually save a PDF.
+resetImports();
+const hiddenRetry = await outcome(() => api.processWorker("translate"));
+check("retry after a failed hidden-progress job imports instead of remaining locked",
+  !hiddenRetry.error && hiddenRetry.value?.ok === 1 && hiddenRetry.value?.failed === 0
+    && savedAttachments.length === 1,
+  `error=${errorText(hiddenRetry)}, saved=${savedAttachments.length}`);
+api.setPref("showProgress", true);
+sandbox.__selectedItems = [];
+importBehavior = null;
+
+// Connection checks must deploy the shipped compatibility helper and run the
+// scoped controller even when a server health endpoint is already reachable.
+const controllerBefore = subprocessCalls.length;
+const writesBeforeController = writes.length;
+const controlledStart = await outcome(() => api.ensureLocalService(api.getServerConfig().serverUrl));
+const controllerWrites = writes.slice(writesBeforeController);
+check("healthy private service still runs its scoped compatibility controller",
+  !controlledStart.error && controlledStart.value?.ok === true
+    && subprocessCalls.length === controllerBefore + 1,
+  `error=${errorText(controlledStart)}, calls=${subprocessCalls.length - controllerBefore}`);
+check("service controller and compatibility module are copied from bundled resources",
+  controllerWrites.some(entry => entry.path.endsWith("pdf2rea_service_control.py")
+    && entry.contents === fs.readFileSync(path.join(ROOT, "plugin/content/runtime/service_control.py"), "utf8"))
+  && controllerWrites.some(entry => entry.path.endsWith("server_compat.py")
+    && entry.contents === fs.readFileSync(path.join(ROOT, "plugin/content/runtime/server_compat.py"), "utf8")));
+check("controller only receives the marked private runtime and its own interpreter",
+  subprocessCalls.at(-1)?.command === path.join(ARTIFACTS, "fakehome", ".pdf2rea", "server", "zotero-pdf2zh-next-venv", "bin", "python")
+    && subprocessCalls.at(-1)?.arguments.at(-1) === path.join(ARTIFACTS, "fakehome", ".pdf2rea", "server")
+    && subprocessCalls.at(-1)?.arguments.includes("start"));
 
 // path helpers must resolve home without the removed `OS` module
 const serverDir = await api.detectServerDir();

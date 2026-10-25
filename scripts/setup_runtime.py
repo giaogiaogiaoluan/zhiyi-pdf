@@ -134,8 +134,9 @@ os.environ['PDF2REA_LEDGER_PATH']=str(r/'ledger.json')
 os.environ['PYTHONDONTWRITEBYTECODE']='1'
 os.environ.pop('PYTHONPATH',None)
 os.chdir(r)
-os.execv(str(r/'zotero-pdf2zh-next-venv/bin/python'),['python','-B',str(r/'server.py'),'--port','8891','--host','127.0.0.1','--check_update=False','--enable_venv=False',*sys.argv[1:]])
+os.execv(str(r/'zotero-pdf2zh-next-venv/bin/python'),['python','-B',str(r/'server_compat.py'),'--runtime',str(r),*sys.argv[1:]])
 '''
+    shutil.copy2(ROOT/'plugin/content/runtime/server_compat.py', target/'server_compat.py')
     (target/'run_pdf2rea.py').write_text(runner)
     launcher = '#!/bin/zsh\nTASK_ROOT="${0:A:h}"\nexec "$TASK_ROOT/zotero-pdf2zh-next-venv/bin/python" -B "$TASK_ROOT/run_pdf2rea.py"\n'
     start = target/'启动 知译 PDF.command';start.write_text(launcher);start.chmod(0o755)

@@ -3,9 +3,9 @@
     "pdf2rea@qoder.dev": {
       "updates": [
         {
-          "version": "1.1.1",
-          "update_link": "https://github.com/giaogiaogiaoluan/zhiyi-pdf/releases/download/v1.1.1/ZhiYi-PDF-1.1.1.xpi",
-          "update_hash": "sha256:1187401894880a86a829b1d018e396b45110c65a64b180568aed3262577b3b76",
+          "version": "1.1.2",
+          "update_link": "https://github.com/giaogiaogiaoluan/zhiyi-pdf/releases/download/v1.1.2/ZhiYi-PDF-1.1.2.xpi",
+          "update_hash": "sha256:4ec3a437b79807aa3ab4b01a01312df60c7112b554e2265a2c9c3755470733cd",
           "applications": {
             "zotero": {
               "strict_min_version": "6.999",

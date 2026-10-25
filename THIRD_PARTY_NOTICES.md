@@ -2,7 +2,7 @@
 
 **知译 PDF（ZhiYi PDF）基于 PDF2zh 生态开发，参考并兼容 [guaguastandup/zotero-pdf2zh](https://github.com/guaguastandup/zotero-pdf2zh) v4.1.7 的服务协议与工作流程。** 感谢上游作者与贡献者提供的基础工作。
 
-知译 PDF 是独立维护的兼容实现，不是上游官方版本，也不声称完整复刻或完整 fork。公开版本：**1.1.1**；本次整理与增强修改日期：**2026-10-22**。维护账号：`giaogiaogiaoluan`。
+知译 PDF 是独立维护的兼容实现，不是上游官方版本，也不声称完整复刻或完整 fork。公开版本：**1.1.2**；本次整理与增强修改日期：**2026-10-24**。维护账号：`giaogiaogiaoluan`。
 
 本仓库及其自有增强代码以 **GNU Affero General Public License v3.0（AGPL-3.0）** 分发，许可全文见 [LICENSE](LICENSE)。你可以按该许可证使用、修改和再分发；本软件不提供许可证第 15、16 条所述保证。再分发修改版本时，请保留适用的来源、版权、许可与修改说明，并提供对应源码。
 

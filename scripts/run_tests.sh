@@ -80,6 +80,7 @@ python3 tests/test_engine.py
 python3 tests/test_joint_paragraph.py
 python3 tests/test_prompt_boundary.py
 python3 tests/test_preferences_contract.py
+python3 tests/test_server_compat.py
 
 echo
 echo "==> 插件请求与配置契约（模拟 Zotero）"

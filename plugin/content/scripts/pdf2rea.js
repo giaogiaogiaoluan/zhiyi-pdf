@@ -24,7 +24,7 @@
   const ADDON_ID = "pdf2rea@qoder.dev";
   const ADDON_REF = "pdf2rea";
   const PREF_PREFIX = "extensions.zotero.pdf2rea.";
-  const PLUGIN_VERSION = "1.1.1";
+  const PLUGIN_VERSION = "1.1.2";
 
   const rootURI = typeof _globalThis !== "undefined" && _globalThis.rootURI
     ? _globalThis.rootURI
@@ -625,7 +625,7 @@
       const { fileName, base64 } = await this.prepareFileData();
       const response = await this.sendRequest(fileName, base64, onProgress);
       onProgress("importing");
-      await this.importResults(response);
+      return await this.importResults(response);
     }
 
     async prepareFileData() {
@@ -664,6 +664,11 @@
     }
 
     async sendRequest(fileName, base64, onProgress) {
+      if (this.endpoint === "translate" && this.config.engine === "pdf2zh_next"
+        && !["mono", "dual", "mono_cut", "dual_cut", "crop_compare", "compare"]
+          .some(key => this.config[key] === true || this.config[key] === "true")) {
+        throw new Error("未选择输出 PDF。请在“排版与输出”中至少勾选一种结果后再翻译。");
+      }
       const service = this.config.engine === "pdf2zh"
         ? this.config.service : this.config.next_service;
       const llmApi = activeLLMApi(service);
@@ -771,11 +776,17 @@
 
     async importResults(payload) {
       if (!payload || payload.status !== "success" || !Array.isArray(payload.fileList)) {
-        throw new Error("server returned no file list");
+        throw new Error("服务器没有返回可导入的 PDF 文件列表");
       }
+      const candidates = payload.fileList.map((name, index) => ({ name, index }))
+        .filter(({ name }) => typeof name === "string" && /\.pdf$/i.test(name));
+      if (!candidates.length) throw new Error("任务已结束，但没有可导入的 PDF 文件");
       const attachKeys = new Set();
-      for (let index = 0; index < payload.fileList.length; index += 1) {
-        const name = payload.fileList[index];
+      const seenFiles = new Set();
+      let imported = 0;
+      for (const { name, index } of candidates) {
+        if (seenFiles.has(name)) continue;
+        seenFiles.add(name);
         const localPath = typeof payload.filePaths?.[index] === "string" ? payload.filePaths[index] : "";
         const type = EngineJob.fileType(name);
         const bytes = localPath && (await exists(localPath))
@@ -786,7 +797,7 @@
           `pdf2rea-${Date.now()}-${index}-${fileLeaf(name)}`);
         await IOUtils.write(tempPath, bytes);
         try {
-          await this.attach(tempPath, name, type, attachKeys);
+          if (await this.attach(tempPath, name, type, attachKeys)) imported += 1;
         } finally {
           try {
             await IOUtils.remove(tempPath);
@@ -795,6 +806,8 @@
           }
         }
       }
+      if (!imported) throw new Error("没有 PDF 附件成功加入 Zotero，任务未完成");
+      return imported;
     }
 
     async download(fileName) {
@@ -867,6 +880,7 @@
         parentItemID,
         libraryID: item.libraryID,
         fileBaseName: leaf.replace(/\.pdf$/i, ""),
+        contentType: "application/pdf",
         title
       });
       if (attachment && attachment.id) {
@@ -880,7 +894,7 @@
         }
         return true;
       }
-      return false;
+      throw new Error("Zotero 没有返回有效的 PDF 附件，译文未成功加入文献库");
     }
   }
 
@@ -927,14 +941,17 @@
     const progress = new ProgressReporter(tasks.length);
     let ok = 0;
     let failed = 0;
+    const taskErrors = [];
     try {
       for (const task of tasks) {
         try {
-          await task.run((phase, detail) => progress.update(task, phase, detail));
+          const imported = await task.run((phase, detail) => progress.update(task, phase, detail));
+          if (!Number.isInteger(imported) || imported < 1) throw new Error("没有 PDF 附件成功加入 Zotero");
           ok += 1;
           progress.done(task);
         } catch (error) {
           failed += 1;
+          taskErrors.push(`${task.item.getDisplayTitle?.() || "PDF"}: ${error.message || error}`);
           progress.fail(task, error);
           Zotero.logError(error);
         }
@@ -948,6 +965,10 @@
       const engineStatus = await readEngineStatus();
       progress.finish(ok, failed, null, engineStatus);
     } finally { state.running = false; }
+    if (failed && !getPref("showProgress", true)) {
+      win.alert(`${t("job-done", ok, failed)}\n${taskErrors.join("\n")}`);
+    }
+    return { ok, failed };
   }
 
   async function probeServer(serverUrl) {
@@ -970,13 +991,15 @@
     if (serverUrl.replace(/\/+$/, "") !== expected) {
       throw new Error(`此插件仅使用独立环境的地址 ${expected}，请检查 Server 地址，勿填写原版 8890`);
     }
-    if (await probeServer(serverUrl)) return { ok: true, status: "running" };
     if (serviceStartPromise) return serviceStartPromise;
     serviceStartPromise = (async () => {
       const script = await readText(rootURI + "content/runtime/service_control.py");
       if (!script) throw new Error("安装包缺少独立服务启动器");
       const helper = joinPath(server, "pdf2rea_service_control.py");
       await writeText(helper, script);
+      const compatibility = await readText(rootURI + "content/runtime/server_compat.py");
+      if (!compatibility) throw new Error("安装包缺少独立服务兼容组件");
+      await writeText(joinPath(server, "server_compat.py"), compatibility);
       const { Subprocess } = ChromeUtils.importESModule("resource://gre/modules/Subprocess.sys.mjs");
       const proc = await Subprocess.call({
         command: joinPath(server, "zotero-pdf2zh-next-venv", "bin", "python"),
@@ -1068,6 +1091,7 @@
       const entry = this.rows.find((item) => item.task === task);
       if (entry) {
         entry.item.setProgress(100);
+        entry.item.setText(`${task.item.getDisplayTitle?.() || "PDF"} · 已加入 Zotero`);
       }
     }
 
@@ -1102,7 +1126,11 @@
           Zotero.logError(inner);
         }
       });
-      this.window.startCloseTimer(8000);
+      if (failed || error) {
+        this.window.changeHeadline("知译 PDF：任务未完成");
+      } else {
+        this.window.startCloseTimer(8000);
+      }
     }
   }
 
