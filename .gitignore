@@ -34,5 +34,7 @@ __pycache__/
 *.p12
 *.pfx
 
-# 构建生成的增强组件副本
-plugin/content/engine/
+# Python 构建产物
+engine/build/
+*.egg-info/
+.pytest_cache/
