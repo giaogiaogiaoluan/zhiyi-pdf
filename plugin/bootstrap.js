@@ -2,9 +2,8 @@
 /**
  * 知译 PDF bootstrap -- Zotero 7/10 bootstrapped-extension entry point.
  *
- * Structure follows zotero-pdf2zh 4.1.7 (same manifest + bootstrap + single
- * content script contract), but without the zotero-plugin-toolkit dependency: the
- * plugin only needs a preferences pane, a submenu in the item list, and file IO.
+ * Minimal bootstrapped plugin: a preferences pane, one item-menu entry and
+ * file IO. All PDF work happens in the local ZhiYi engine service.
  */
 
 var chromeHandle;
@@ -28,7 +27,8 @@ async function startup({ id, version, resourceURI, rootURI }, reason) {
   ]);
 
   const ctx = { rootURI, Zotero, Services, IOUtils, PathUtils, Components,
-    ChromeUtils, Cc, Ci, Cu, fetch, btoa, atob, setTimeout, clearTimeout };
+    ChromeUtils, Cc, Ci, Cu, fetch, btoa, atob, setTimeout, clearTimeout,
+    AbortController };
   ctx._globalThis = ctx;
 
   Services.scriptloader.loadSubScript(

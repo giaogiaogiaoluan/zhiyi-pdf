@@ -1,70 +1,73 @@
 # 开发说明
 
-知译 PDF 由 Zotero 客户端与 Python 翻译增强组件组成。客户端兼容 zotero-pdf2zh Server 4.1.7 的主要任务协议，增强组件在独立翻译进程中加载。上游服务、引擎依赖及模型不随仓库分发，来源和许可证见 [第三方说明](../THIRD_PARTY_NOTICES.md)。
+知译 PDF 2 由两部分组成：
 
-## 源码结构
+- **引擎**（`engine/zhiyi/`，Python）：分析 PDF、翻译、排版、写出结果，并提供本机 HTTP 服务；
+- **插件**（`plugin/`，Zotero 7/10 bootstrapped 插件）：菜单、设置页、提交任务、把结果加入文献库。
 
-| 路径 | 内容 |
+## 引擎模块
+
+按处理顺序：
+
+| 模块 | 作用 |
 | --- | --- |
-| `plugin/manifest.json` | 插件名称、版本和兼容范围 |
-| `plugin/bootstrap.js` | Zotero 生命周期与资源注册 |
-| `plugin/prefs.js` | 默认偏好设置 |
-| `plugin/content/preferences.xhtml` | 原生设置页 |
-| `plugin/content/scripts/pdf2rea.js` | 菜单、偏好、任务及产物管理 |
-| `plugin/content/runtime/service_control.py` | 独立本机服务控制 |
-| `engine/pdf2rea_engine/` | Python 翻译增强组件及术语 CSV |
-| `scripts/` | 环境准备、测试、校验与打包 |
-| `tests/` | 合成文本、合成 PDF 和协议契约测试 |
+| `extract.py` | 用 PyMuPDF `rawdict` 取得每个字形的位置、字号、字体，把 MuPDF 拆碎的片段拼回视觉行；标记上下标 |
+| `regions.py` | DocLayout-YOLO（ONNX）检测区域：正文、标题、图、表、行间公式、图表标题、页眉页脚 |
+| `layout.py` | 给行贴上区域标签；把同栏上下相邻的行堆叠起来，再按行距、首行缩进、悬挂缩进和行尾留白切成段落片段（`Block`）；判断标题、脚注、列表等角色 |
+| `order.py` | 多栏阅读顺序（找栏间空白，跨栏元素作为分隔带）；计算每个片段可以占用的宽度和向下延伸的界限 |
+| `chain.py` | 把被栏、页、行间公式切断的片段链接成一个逻辑段落（`Unit`） |
+| `formula.py` | 行内公式识别：数学字体、上下标、无法用文字表示的字形才算公式；数字、运算符按上下文并入 |
+| `markup.py` | 生成发给翻译的标记文本（`{v1}` 行内公式、`{eq1}` 行间公式位置、`<b> <i> <sup> <sub> <a>` 样式）；校验并修复译文中的标记 |
+| `analyze.py` | 串起以上步骤，识别参考文献（默认不翻译） |
+| `translate/` | 后端（OpenAI 兼容、谷歌、测试用的 pseudo 和 file）；批量提示词、自动术语表、语境、SQLite 缓存、漏译检测与重试 |
+| `typeset.py` | 分词成不可断开的片段（拉丁词、数字、标点禁则），贪心断行，两端对齐；按样式组统一求解字号和行距，个别段落按“收紧行距 → 用下方空白 → 缩字”的顺序兜底 |
+| `render.py` | 用细条擦除区精确删除原文字形（避开需要保留的字形）；写入译文；从“只剩行内公式”的副本中以矢量方式剪贴公式；生成双语对照 |
+| `pipeline.py` | 单个 PDF 的完整流程和 `*.report.json` |
+| `server.py` / `service.py` / `cli.py` | 本机 HTTP 服务、后台启停、命令行 |
+| `assets.py` / `fonts.py` | 模型与字体的查找和下载（优先复用 `~/.cache/babeldoc`）；拉丁/中文字体按字符选择 |
 
-构建脚本将 `engine/pdf2rea_engine/` 复制到 `plugin/content/engine/`，生成文件清单后打入 XPI。请编辑 `engine/` 中的源文件，避免仅修改构建生成的副本。
+## 设计约定
 
-## 开发环境
+1. **一致优先**：字号、行距按样式组求解，不按段落求解。新增兜底逻辑时，不要让单个段落悄悄改变字号；必须改变时写入 `unit.notes` 和报告。
+2. **模型只定类型，排版特征定边界**：不要用检测框直接当作段落。
+3. **宁可保留原文，不要排错**：识别不确定的文字（非正文的短行、旋转文字、放不下的单元格）保持原样。
+4. **标记必须可验证**：译文中占位符丢失、重复或标签不配对时，`markup.repair` 修复或降级，并记录原因。
+5. 服务只监听回环地址，只接受 JSON 请求，并校验 `Host` 头。
 
-源码构建需要 Python 3、Node.js、Bash 和 rsync。真实引擎检查另外需要独立的 BabelDOC 0.6.2 / pdf2zh_next 2.9.0 环境。当前仅在 macOS + Zotero 10.0.6 完成实测，不能仅凭清单兼容范围推断其他平台已经验证。
+## 本机服务协议
 
-首次准备独立环境：
+| 请求 | 说明 |
+| --- | --- |
+| `GET /health` | `{"status": "ok", "name": "zhiyi", "version": …}` |
+| `POST /translate` | `{"fileName", "fileContent"(base64), "config": {…Config 字段…}}` → `{"status": "accepted", "taskId"}`；也兼容 1.x 插件的字段名 |
+| `GET /api/tasks` | 排队和进行中的任务（`percent`、`message`） |
+| `GET /api/history` | 已结束的任务（`fileList`、`filePaths`、`summary` 或 `error`） |
+| `GET /translatedFile/<文件名>` | 下载结果 |
+| `POST /api/test` | 用当前配置翻译一句话 |
+
+`Config` 字段见 `engine/zhiyi/config.py`。
+
+## 开发环境与测试
 
 ```sh
-python3 scripts/setup_runtime.py --source /path/to/zotero-pdf2zh/server
+uv venv --python 3.12 .venv
+uv pip install --python .venv/bin/python -e "engine[dev]"
+bash scripts/run_tests.sh
 ```
 
-准备脚本只读使用源服务，目标默认为 `~/.pdf2rea/server`，拒绝覆盖已有目标目录。测试插件时，请使用独立 Zotero 配置和合成条目，不要把日常文献库作为测试夹具。
+引擎测试使用合成的双栏 PDF（`engine/tests/conftest.py`），并替换掉版面模型，不需要联网或下载模型。插件测试在 Node 中用模拟的 Zotero 对象运行 `pdf2rea.js`。
 
-## 测试与构建
+真实论文的检查：
 
 ```sh
-# 无真实引擎：纯逻辑、配置契约、JavaScript 与包结构检查
-bash scripts/run_tests.sh --skip-wiring
-bash scripts/build_xpi.sh --skip-wiring
-
-# 有真实引擎：包含 BabelDOC 挂接和子进程检查
-VENV_PY=/path/to/independent-venv/bin/python bash scripts/run_tests.sh
-VENV_PY=/path/to/independent-venv/bin/python bash scripts/build_xpi.sh
+PYTHONPATH=engine .venv/bin/python -m zhiyi paper.pdf -o out/ --service google
 ```
 
-`VENV_PY` 可指定解释器；`VENV` 兼容指定虚拟环境目录或解释器。测试状态默认写入临时目录，与日常服务配置、翻译缓存和术语记忆库隔离。运行合成 PDF 的完整流程比较可使用：
+然后查看 `out/*.report.json`：`layout.groups` 是各样式组的字号和行距，`notes` 列出有问题的段落，`layout.stuck_glyphs` 是未能精确擦除的原文字形数。
 
-```sh
-VENV_PY=/path/to/independent-venv/bin/python bash scripts/run_tests.sh --e2e
-```
+## 发布
 
-源码检查、真实引擎挂接、合成 PDF 流程和 Zotero 原生界面验证覆盖不同问题。报告结果时应明确实际完成的检查；`--skip-wiring` 不等于完整集成验证，也不能证明翻译模型质量。
-
-## 兼容约定
-
-1. 用户可见名称为“知译 PDF”，插件版本为 1.1.2；增强组件仍为 1.0.5。此版本不改变翻译算法；服务兼容入口只在内存中修正产物命名，并确认附件入库。
-2. 保留插件 ID `pdf2rea@qoder.dev`、偏好前缀 `extensions.zotero.pdf2rea.`、资源命名空间、Python 包 `pdf2rea_engine` 和独立运行路径，确保早期版本保留设置并直接升级。
-3. 保留原有菜单任务、请求字段、异步轮询、产物命名和附件归属行为；显示文案与内部协议字段分开调整。
-4. 免费服务与自有 API 的选择保持明确；选择免费服务时不附带其他提供方保存的密钥。
-5. 原版 PDF2zh 的插件、服务与文献库保持独立。修改和测试应限制在本项目及独立环境中。
-
-跨页、表格、引用符号等能力依赖引擎内部结构。升级 BabelDOC 或 pdf2zh_next 时，应先检查挂接位置与回退行为，再运行集成测试和渲染检查。
-
-## 发布检查
-
-- 更新插件清单、界面版本与中文更新记录，核对增强组件是否实际变化。
-- 运行适用测试，检查包内文件清单及 XPI 安装、正常重启和设置页。
-- 以合成条目验证菜单和附件工作流，确认没有写入原版运行环境。
-- 只提交源码与通用文档；排除运行环境、密钥、文献库、PDF、译文、缓存、日志、备份和本机诊断记录。
-- 发布 `dist/ZhiYi-PDF-<版本>.xpi` 及对应版本源码 ZIP，保留 LICENSE 和第三方说明。`dist/` 为本地构建目录，不纳入源码版本管理。
-- 免费接口及第三方模型服务由提供方维护；发布本插件不意味着这些服务始终可用。
+1. 同步三处版本号：`plugin/manifest.json`、`plugin/content/scripts/pdf2rea.js` 的 `PLUGIN_VERSION`、`engine/zhiyi/__init__.py`（构建脚本会检查）。插件只会自动重启与自己版本一致的引擎。
+2. 更新 `CHANGELOG.md`。
+3. `bash scripts/build_xpi.sh`，在 Zotero 中安装 `dist/` 下的 XPI，用真实条目翻译一篇论文。
+4. 发布 XPI 与同版本源码包，更新 `updates.json` 中的版本、下载地址和 `sha256`。

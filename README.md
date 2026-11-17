@@ -1,105 +1,95 @@
-# 知译 PDF（ZhiYi PDF）
+# 知译 PDF（ZhiYi PDF）2.0
 
-**基于 PDF2zh / [zotero-pdf2zh](https://github.com/guaguastandup/zotero-pdf2zh) 生态开发，配合 [PDFMathTranslate-next](https://github.com/PDFMathTranslate-next/PDFMathTranslate-next) 与 [BabelDOC](https://github.com/funstory-ai/BabelDOC) 使用。** 感谢上游作者与贡献者。知译 PDF 是独立维护的兼容实现，不是上游官方版本，也不声称完整复刻上游的所有功能。
+在 Zotero 中翻译论文 PDF：保留原版面，生成纯译文和双语对照，作为附件加入原文献条目。
 
-在 Zotero 中翻译论文 PDF，生成纯译文与双语对照，并提供跨页段落、术语、列表和表格文字处理。
+2.0 是一次重写。1.x 在 PDF2zh / BabelDOC 之上打补丁，绕不开它们逐块翻译、逐块排版的结构；2.0 换成自研引擎，从三个老问题入手：
 
-当前插件版本：**1.1.2**。翻译增强组件：**1.0.5**。本版修复对照、裁剪结果的路径处理及附件入库确认，保持现有翻译算法和默认设置。
+| 1.x 的问题 | 原因 | 2.0 的做法 |
+| --- | --- | --- |
+| 跨栏、跨页的段落翻得很差 | 段落在栏底被切成两块，两半各自翻译 | 按阅读顺序把被栏、页、行间公式切开的段落重新连成一段，**整段**交给翻译，再像连续的文本框一样把译文依次排回各个位置 |
+| 排版错乱 | 版面识别框直接当作段落，框不准时段落被拆开或粘连 | 版面模型只用来**判断区域类型**，段落边界由行距、首行缩进、悬挂缩进、行尾留白等排版特征决定 |
+| 字号忽大忽小 | 每个文本框各自缩小字号直到装下 | 字号和行距按**样式组**（全部正文、全部图注、每个表格…）统一求解；只有极少数实在放不下的段落才单独缩小，并在报告中列出 |
 
-![知译 PDF 设置界面](docs/images/settings.png)
+此外：
 
-## 功能
+- **公式**：只有真正的数学符号（数学字体、上下标、无法用文字表示的字形）才作为公式原样保留；数字、百分号、引用编号留在句子里交给翻译，不再“乱飞”。行内公式以矢量形式从原页面复制到译文中。
+- **术语**：使用大模型时，先通读全文抽取术语表，整篇论文统一译法；也可以填写自己的术语。
+- **参考文献、页眉页脚、图片、行间公式**保持原样。
+- 翻译结果有本地缓存，重新生成或换版式不必重复付费。
 
-- 从文献条目或 PDF 附件的右键菜单启动翻译、裁剪白边、双语对照、裁剪并对照。
-- 生成纯译文或双语 PDF，支持左右、上下排版，以及完成后打开所选附件。
-- 使用免费翻译服务，或配置自己的 DeepSeek、OpenAI 兼容等 API。
-- 对识别到的跨页段落联合翻译，并将结果分配回原有页面；支持术语表、数字风格、列表、表格文字和引用符号处理。
-- 在设置中管理服务连接、增强组件，查看最近一次任务的处理记录。
+## 安装
 
-设置分为“翻译设置、翻译服务、排版与输出、翻译增强、连接与诊断、关于”六个分区。
+需要 macOS（已在 Zotero 10 上开发；Linux 应可用但未验证，Windows 暂不支持自动启动服务）。
 
-## 运行条件
+1. **安装引擎**：下载同版本源码包并解压，双击 **`安装 知译 PDF 引擎.command`**（或在终端运行 `bash scripts/install.sh`）。
+   - 引擎装在 `~/.zhiyi`，有独立的 Python 环境，不会改动 PDF2zh、知译 1.x（`~/.pdf2rea`）或系统 Python。
+   - 首次会下载版面模型和字体（约 300 MB）；用过 PDF2zh 的机器会直接复用它的缓存。
+   - 有 [uv](https://docs.astral.sh/uv/) 时更快；没有则使用 Python 3.10+ 自带的 venv。
+2. **安装插件**：在 [Releases](https://github.com/giaogiaogiaoluan/zhiyi-pdf/releases) 下载 `ZhiYi-PDF-2.0.0.xpi`，Zotero → 工具 → 插件 → 齿轮 → 从文件安装插件。从 1.x 直接覆盖安装即可，已保存的 API 设置会自动迁移。
+3. **选择翻译服务**：Zotero 设置 → 知译 PDF → 翻译服务，点击“测试翻译服务”确认可用。
 
-当前实测环境为 **macOS + Zotero 10.0.6**。其他操作系统和 Zotero 版本尚未完成验证。
+升级引擎时重新运行安装脚本即可。
 
-**XPI 只包含 Zotero 客户端和自有增强组件，不包含完整翻译服务器。** 当前环境准备方式依赖本机已安装的以下环境：
+## 使用
 
-| 组件 | 已验证版本 |
+在文献库里选中文献条目或 PDF 附件，右键 **知译 PDF：翻译**。进度窗口会显示每篇论文的处理阶段；完成后译文作为附件加入条目，并给出摘要（段落数、合并了多少跨栏/跨页段落、有无单独缩小字号的段落）。
+
+### 翻译服务
+
+| 方式 | 说明 |
 | --- | --- |
-| zotero-pdf2zh Server | 4.1.7 |
-| pdf2zh_next | 2.9.0 |
-| BabelDOC | 0.6.2 |
+| 大模型 API（推荐） | 任何 OpenAI 兼容接口：DeepSeek、硅基流动、火山方舟、阿里云百炼、智谱、OpenAI、本机 Ollama 等。整段翻译、术语统一和格式标记都依赖它。费用由所选服务按用量计。 |
+| 谷歌翻译 | 免密钥，适合试用。译文质量一般，可能限流，不支持自动术语表。 |
 
-如果尚未安装后端，请先参照 [zotero-pdf2zh 的安装说明](https://github.com/guaguastandup/zotero-pdf2zh)准备。知译 PDF 的准备脚本只读复制已有环境，不会自动下载并配置完整后端。
+1.x 中的“免费翻译（SiliconFlow Free）”是 PDF2zh 官方流程专用的代理通道，2.0 无法使用。
 
-## 安装与升级
+### 输出
 
-1. 在 [GitHub Releases](https://github.com/giaogiaogiaoluan/zhiyi-pdf/releases) 中选择 **1.1.2**，下载 `ZhiYi-PDF-1.1.2.xpi`。首次准备服务时，还需要同版本源码 ZIP。
-2. 打开 Zotero 的插件管理器，选择 **齿轮 → 从文件安装插件**，选择 XPI。
-3. 按 Zotero 提示重启，在“设置 → 知译 PDF → 关于”中确认插件版本为 **1.1.2**。
-4. 按下一节准备独立翻译服务，检测连接后开始使用。
-
-已有早期版本的用户直接安装新版 XPI 即可。内部插件 ID、偏好键和增强模块路径继续沿用历史名称，以保留设置和升级关系；因此部分技术路径中仍会出现 `pdf2rea`。插件版本为 1.1.2、增强组件版本为 1.0.5 是正常组合。
-
-## 准备翻译服务
-
-在 macOS 上解压同版本源码 ZIP，双击其中的 **`启动 知译 PDF.command`**。首次运行会从默认位置 `~/zotero-pdf2zh/server` 只读复制服务与引擎到独立目录：
-
-```text
-~/.pdf2rea/server
-```
-
-准备脚本拒绝覆盖已有目标目录，不复制原版的密钥配置、翻译缓存和已译文档。原版 PDF2zh 可继续使用自己的服务与配置。
-
-如果原服务位于其他位置，在解压后的项目目录执行：
-
-```sh
-python3 scripts/setup_runtime.py --source /path/to/zotero-pdf2zh/server
-```
-
-已有独立服务会在启动时检查兼容组件。仅在确认属于本插件且没有活动任务时升级重启；无法核实旧进程时会提示先退出独立服务，不会操作原版8890。
-
-准备完成后运行启动入口，在“连接与诊断”中检测默认地址 **`http://127.0.0.1:8891`**。已有独立环境的用户无需重复准备；插件会尝试启动本机服务。增强组件未安装或需要更新时，使用该分区的组件安装按钮。
-
-## 日常使用
-
-1. 在“翻译设置”中选择源语言、目标语言和翻译服务。
-2. 在“排版与输出”中勾选所需产物，例如纯译文、左右双语对照。
-3. 在文献库中选中原始 PDF，或包含它的文献条目，右键选择 **知译 PDF → 翻译 PDF**。
-4. 完成后，所选产物会添加到原文献条目下。修改设置后需重新翻译，已有译文不会自动更新。
-
-### 免费服务与自有 API
-
-两种方式可以随时切换。选择免费服务时，不会附带已保存的其他服务的 API Key，也不会自动切换到付费服务。免费服务的可用性、限流及使用规则由提供方决定；自有 API 按对应提供方的规则计费。
-
-使用自己的 API 时，在“翻译服务”中填写并保存地址、模型和密钥。第三方兼容地址请选择 **OpenAI 兼容**；DeepSeek 专用服务使用其官方接口。API 配置单独保存，不自动读取原版插件的密钥。
-
-翻译内容会交给所选服务处理，请按文档使用要求选择提供方。源码、安装包和公开截图不包含用户文献、配置或密钥。
+- **纯译文**：原版面，文字替换为译文。
+- **双语对照**：左右并排（原文在左），或原文、译文逐页交替。
 
 ### 使用边界
 
-跨页识别、表格切分和符号分类依赖 PDF 的文字与版面信息。复杂公式、合并单元格、图像表格和过窄文本框仍可能需要人工检查；识别失败时会保留原文或回退处理。跨页联合翻译及 LLM 术语增强需要相应 LLM 服务，其他服务的能力不同。
+- 扫描版 PDF 没有文字层，需要先做 OCR。
+- 竖排、旋转的文字和图片中的文字保持原样。
+- 复杂表格（合并单元格、极窄的列）中放不下的单元格会保留原文。
+- 版面识别依赖模型，少见的版式仍可能出错；每次翻译都会在输出目录生成 `*.report.json`，列出合并、缩字、保留原文的位置，方便检查。
 
-处理记录用于定位问题，不能代表翻译准确率。旧 pdf2zh 1.x 环境的自动准备、完整 API 模型发现及多语言设置界面尚未提供。
+## 命令行
+
+引擎也可以单独使用：
+
+```sh
+~/.zhiyi/venv/bin/python -m zhiyi paper.pdf -o out/ \
+  --service openai --base-url https://api.deepseek.com/v1 --model deepseek-chat --api-key sk-…
+~/.zhiyi/venv/bin/python -m zhiyi paper.pdf -o out/ --service google --pages 1-3
+~/.zhiyi/venv/bin/python -m zhiyi service status
+```
+
+`--help` 列出全部选项（术语表、双语版式、是否翻译表格与参考文献等）。
+
+## 工作原理
+
+```
+PDF ─► 字形抽取（PyMuPDF） ─► 版面区域（DocLayout-YOLO）
+    ─► 行 ─► 段落片段（按行距、缩进、留白分段） ─► 阅读顺序（多栏）
+    ─► 段落链接（跨栏 / 跨页 / 跨行间公式） ─► 行内公式识别 ─► 带占位符的标记文本
+    ─► 批量翻译（术语表、上文语境、缓存、失败重试）
+    ─► 按样式组统一字号与行距 ─► 中文排版（标点禁则、中西文间距、两端对齐）
+    ─► 精确擦除原文 ─► 写入译文与公式 ─► 纯译文 / 双语对照
+```
+
+代码在 `engine/zhiyi/`，结构见 [开发说明](docs/development.md)。
 
 ## 开发
 
-仓库包含插件、增强组件和合成测试，不包含上游服务器、虚拟环境、模型、字体或个人测试论文。
-
 ```sh
-# 没有真实引擎时：运行源码和协议检查，再构建 XPI
-bash scripts/run_tests.sh --skip-wiring
-bash scripts/build_xpi.sh --skip-wiring
-
-# 已有独立引擎时：运行包含真实引擎挂接的检查
-VENV_PY="$HOME/.pdf2rea/server/zotero-pdf2zh-next-venv/bin/python" bash scripts/run_tests.sh
-VENV_PY="$HOME/.pdf2rea/server/zotero-pdf2zh-next-venv/bin/python" bash scripts/build_xpi.sh
+bash scripts/run_tests.sh      # 引擎 pytest（合成 PDF，不需联网和模型）+ 插件 node 测试
+bash scripts/build_xpi.sh      # 测试通过后生成 dist/ZhiYi-PDF-<版本>.xpi
 ```
-
-构建产物为 `dist/ZhiYi-PDF-1.1.2.xpi`。`--skip-wiring` 会跳过真实引擎检查，不能据此宣称完整集成验证通过。目录说明、测试与兼容约定见 [开发说明](docs/development.md)，版本变化见 [更新记录](CHANGELOG.md)。
 
 ## 许可证与致谢
 
-本项目按 **GNU Affero General Public License v3.0（AGPL-3.0）** 分发，详见 [LICENSE](LICENSE) 与 [第三方项目及来源说明](THIRD_PARTY_NOTICES.md)。
+本项目按 **GNU AGPL-3.0** 分发，见 [LICENSE](LICENSE) 与 [第三方说明](THIRD_PARTY_NOTICES.md)。
 
-感谢 [zotero-pdf2zh](https://github.com/guaguastandup/zotero-pdf2zh)、[PDFMathTranslate-next](https://github.com/PDFMathTranslate-next/PDFMathTranslate-next)、[BabelDOC](https://github.com/funstory-ai/BabelDOC) 的作者和贡献者。上游组件及第三方服务继续遵守各自许可和使用规则。
+感谢 [PyMuPDF](https://github.com/pymupdf/PyMuPDF)、[DocLayout-YOLO](https://github.com/opendatalab/DocLayout-YOLO)，以及 1.x 所基于的 [zotero-pdf2zh](https://github.com/guaguastandup/zotero-pdf2zh)、[PDFMathTranslate-next](https://github.com/PDFMathTranslate-next/PDFMathTranslate-next)、[BabelDOC](https://github.com/funstory-ai/BabelDOC) 的作者和贡献者。
